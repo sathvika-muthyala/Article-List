@@ -9,12 +9,16 @@ import UIKit
 
 protocol ArticleViewModelProtocol {
     var articleList: [Article] { get }
+    var heightOfRow: Int { get }
     func getDataFromServer(closure: @escaping (() -> Void))
     func getCount() -> Int
-    func getArticle(row: Int) -> Article?
     func getTitle(row: Int) -> String
-    var heightOfRow: Int { get }
+    func getAuthor(row: Int) -> String
+    func getDescription(row: Int) -> String
+    func getFormattedDate(row: Int) -> String
+    func getImage(row: Int, completion: @escaping (UIImage?) -> Void)
 }
+
 
 class ArticleViewModel: ArticleViewModelProtocol {
     
@@ -39,8 +43,44 @@ class ArticleViewModel: ArticleViewModelProtocol {
     }
     
     func getTitle(row: Int) -> String {
-        guard row >= 0, row < articleList.count else { return "" }
-        return articleList[row].title
+        guard let article = getArticle(row: row) else { return "" }
+        return article.title
+    }
+    
+    func getAuthor(row: Int) -> String {
+        return getArticle(row: row)?.author ?? "Unknown"
+    }
+    
+    func getDescription(row: Int) -> String {
+        return getArticle(row: row)?.description ?? ""
+    }
+    
+    func getFormattedDate(row: Int) -> String {
+        guard let isoString = getArticle(row: row)?.dateOfPublication else { return "" }
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        
+        if let date = isoFormatter.date(from: isoString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "yyyy-MM-dd"
+            return displayFormatter.string(from: date)
+        }
+        return isoString
+    }
+    
+    func getImage(row: Int, completion: @escaping (UIImage?) -> Void) {
+        guard let urlString = getArticle(row: row)?.imageUrl,
+              let url = URL(string: urlString) else {
+            completion(nil)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data, let img = UIImage(data: data) else {
+                completion(nil)
+                return
+            }
+            completion(img)
+        }.resume()
     }
 }
-

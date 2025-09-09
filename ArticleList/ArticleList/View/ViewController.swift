@@ -36,18 +36,6 @@ final class ViewController: UIViewController {
 
 extension ViewController: UITableViewDataSource {
     
-    func formatDate(_ isoString: String) -> String {
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime]
-
-        if let date = isoFormatter.date(from: isoString) {
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateFormat = "yyyy-MM-dd"
-            return displayFormatter.string(from: date)
-        }
-        return isoString
-    }
-    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return viewModel.getCount()
     }
@@ -62,21 +50,16 @@ extension ViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         
-        if let article = viewModel.getArticle(row: indexPath.row) {
-            cell.title.text = article.author ?? "Unknown"
-            cell.article.text = article.description
-            cell.postedDate.text = formatDate(article.dateOfPublication)
-            cell.upload.image = UIImage(systemName: "square.and.arrow.up")
-            
-            if let s = article.imageUrl, let url = URL(string: s) {
-                URLSession.shared.dataTask(with: url) { [weak cell] data, _, _ in
-                    guard let data = data, let img = UIImage(data: data) else { return }
-                    DispatchQueue.main.async {
-                        cell?.postImage.image = img
-                    }
-                }.resume()
+        cell.title.text = viewModel.getAuthor(row: indexPath.row)
+        cell.article.text = viewModel.getDescription(row: indexPath.row)
+        cell.postedDate.text = viewModel.getFormattedDate(row: indexPath.row)
+        cell.upload.image = UIImage(systemName: "square.and.arrow.up")
+        viewModel.getImage(row: indexPath.row) { image in
+            DispatchQueue.main.async {
+                cell.postImage.image = image
             }
         }
+        
         return cell
     }
 }

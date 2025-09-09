@@ -27,7 +27,7 @@ final class ViewController: UIViewController {
             title = "Articles"
             navigationController?.navigationBar.prefersLargeTitles = false
             searchController.obscuresBackgroundDuringPresentation = false
-            searchController.hidesNavigationBarDuringPresentation = false
+            searchController.hidesNavigationBarDuringPresentation = true
             searchController.searchBar.placeholder = "What's on your mind?"
             navigationItem.searchController = searchController
             definesPresentationContext = true

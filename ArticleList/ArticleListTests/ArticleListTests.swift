@@ -1,84 +1,53 @@
-//
-//  ArticleListTests.swift
-//  ArticleListTests
-//
-//  Created by sathvika muthyala on 9/8/25.
-//
-
 import XCTest
-import UIKit
 @testable import ArticleList
+import UIKit
 
 final class ArticleViewModelTests: XCTestCase {
 
-    var viewModel: ArticleViewModel!
-    var mockNetwork: MockNetworkManager!
+    var viewModel: MockArticleViewModel!
 
     override func setUp() {
         super.setUp()
-        mockNetwork = MockNetworkManager()
-        viewModel = ArticleViewModel(networkManager: mockNetwork)
+        viewModel = MockArticleViewModel()
     }
 
     override func tearDown() {
         viewModel = nil
-        mockNetwork = nil
         super.tearDown()
     }
 
-    func testGetDataFromServerLoadsArticles() {
-        let article = Article(
-            source: Source(id: "test-source", name: "Test Source"),
-            author: "Test Author",
-            title: "Test Title",
-            description: "Test Description",
-            url: "https://example.com/article",
-            imageUrl: "https://example.com/image.png",
-            dateOfPublication: "2025-09-09T15:47:40Z",
-            content: "Full content here"
-        )
-        mockNetwork.mockArticles = [article]
+    func test_getCount_returnsCorrectNumberOfArticles() {
+        XCTAssertEqual(viewModel.getCount(), 2)
+    }
 
-        let expectation = self.expectation(description: "Data Loaded")
-        viewModel.getDataFromServer {
-            XCTAssertEqual(self.viewModel.getCount(), 1)
-            XCTAssertEqual(self.viewModel.getTitle(row: 0), "Test Title")
-            XCTAssertEqual(self.viewModel.getAuthor(row: 0), "Test Author")
-            XCTAssertEqual(self.viewModel.getDescription(row: 0), "Test Description")
-            XCTAssertEqual(self.viewModel.getFormattedDate(row: 0), "2025-09-09")
+    func test_getTitle_returnsCorrectTitle() {
+        XCTAssertEqual(viewModel.getTitle(row: 0), "Mock Article 1")
+        XCTAssertEqual(viewModel.getTitle(row: 1), "Mock Article 2")
+        XCTAssertEqual(viewModel.getTitle(row: 5), "")     }
+
+    func test_getAuthor_returnsAuthorOrUnknown() {
+        XCTAssertEqual(viewModel.getAuthor(row: 0), "Alice")
+        XCTAssertEqual(viewModel.getAuthor(row: 1), "Unknown") 
+    }
+
+    func test_getDescription_returnsCorrectDescription() {
+        XCTAssertEqual(viewModel.getDescription(row: 0), "This is a mock description 1.")
+        XCTAssertEqual(viewModel.getDescription(row: 1), "This is a mock description 2.")
+    }
+
+    func test_getFormattedDate_returnsCorrectDate() {
+        XCTAssertEqual(viewModel.getFormattedDate(row: 0), "2025-09-09")
+        XCTAssertEqual(viewModel.getFormattedDate(row: 1), "2025-09-08")
+    }
+
+    func test_getImage_returnsNonNilImage() {
+        let expectation = self.expectation(description: "image fetch")
+        viewModel.getImage(row: 0) { image in
+            XCTAssertNotNil(image)
+            XCTAssertEqual(image?.size.width, 1)
+            XCTAssertEqual(image?.size.height, 1)
             expectation.fulfill()
         }
-
-        waitForExpectations(timeout: 1.0)
+        wait(for: [expectation], timeout: 1.0)
     }
-
-    func test_getCount_whenEmpty_returnsZero() {
-        XCTAssertEqual(viewModel.getCount(), 0)
-    }
-
-    func test_getTitle_withInvalidIndex_returnsEmptyString() {
-        XCTAssertEqual(viewModel.getTitle(row: 5), "")
-    }
-
-    func test_getAuthor_withNilAuthor_returnsUnknown() {        let article = Article(
-            source: Source(id: "test-source", name: "Test Source"),
-            author: nil,
-            title: "No Author",
-            description: "desc",
-            url: "https://example.com/article",
-            imageUrl: nil,
-            dateOfPublication: "2025-09-08T15:47:40Z",
-            content: nil
-        )
-        mockNetwork.mockArticles = [article]
-
-        let exp = expectation(description: "fetch")
-        viewModel.getDataFromServer { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
-
-        XCTAssertEqual(viewModel.getAuthor(row: 0), "Unknown")
-    }
-
-
-
 }

@@ -23,16 +23,12 @@ protocol ArticleViewModelProtocol {
 class ArticleViewModel: ArticleViewModelProtocol {
     
     var articleList: [Article] = []
-//    var networkManager = NetworkManager.shared
+    var networkManager = NetworkManager.shared
     var heightOfRow: Int = Height.rowHeight.rawValue
     
-    private let networkManager: NetworkManagerProtocol
-
-    init(networkManager: NetworkManagerProtocol = NetworkManager.shared) {
-            self.networkManager = networkManager
+    init(networkManager: Network = NetworkManager.shared) {
+        self.networkManager = networkManager as! NetworkManager
         }
-
-
     
     func getDataFromServer(closure: @escaping (() -> Void)) {
         networkManager.fetchData(from: Server.articleApi.rawValue) { [weak self] fetchedList in
@@ -82,15 +78,13 @@ class ArticleViewModel: ArticleViewModelProtocol {
             completion(nil)
             return
         }
-
-        networkManager.fetchImage(from: url) { data in
+        
+        URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data, let img = UIImage(data: data) else {
                 completion(nil)
                 return
             }
             completion(img)
-        }
+        }.resume()
     }
-
-
 }

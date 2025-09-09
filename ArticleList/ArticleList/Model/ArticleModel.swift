@@ -6,11 +6,11 @@
 
 import Foundation
 
-struct ArticleList: Codable {
+struct ArticleList: Decodable {
     var articles: [Article]?
 }
 
-struct Article: Codable {
+struct Article: Decodable {
     let source: Source
     let author: String?
     let title: String

@@ -6,41 +6,42 @@ class DetailsViewController: UIViewController {
     @IBOutlet weak var articleTitle: UILabel!
     @IBOutlet weak var body: UILabel!
 
-    var article: Article?
+    var viewModel: DetailsViewModel!
     var closure: ((Article?) -> Void?)? = nil
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        updateText.text = article?.author ?? ""
-        articleTitle.text = article?.title
-        body.text = article?.description
+        updateText.text = viewModel.authorText
+        articleTitle.text = viewModel.titleText
+        body.text = viewModel.bodyText
+        body.numberOfLines = 0
+
         navigationItem.leftBarButtonItem = UIBarButtonItem(
+                barButtonSystemItem: .cancel,
+                target: self,
+                action: #selector(cancelTapped)
+            )
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .save,
             target: self,
             action: #selector(backToPreviousScreen)
         )
-        loadArticleImage(from: article?.imageUrl)
+        
+        viewModel.loadImage { [weak self] image in
+            DispatchQueue.main.async {
+                self?.articleImg.image = image ?? UIImage(systemName: "photo")
+            }
+        }
+    }
+    
+    @objc func cancelTapped() {
+        navigationController?.popViewController(animated: true)
     }
 
     @objc func backToPreviousScreen() {
-        article?.author = updateText.text ?? ""
-        closure?(article)
+        viewModel.setAuthor(updateText.text)
+        closure?(viewModel.article) 
         navigationController?.popViewController(animated: true)
-    }
-    private func loadArticleImage(from path: String?) {
-        guard let path = path, !path.isEmpty else {
-            articleImg.image = UIImage(systemName: "photo")
-            return
-        }
-
-        guard let url = URL(string: path) else {
-            articleImg.image = UIImage(systemName: "photo")
-            return
-        }
-
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            guard let self = self, let data = data, let img = UIImage(data: data) else { return }
-            DispatchQueue.main.async { self.articleImg.image = img }
-        }.resume()
     }
 }

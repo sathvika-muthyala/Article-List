@@ -74,23 +74,24 @@ extension ArticleListViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true) // nicer UX
+        tableView.deselectRow(at: indexPath, animated: true)
 
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
-        guard let detailsVC = storyboard.instantiateViewController(withIdentifier: "DetailsViewController") as? DetailsViewController else {
-            return
-        }
-        
+        guard let detailsVC = storyboard.instantiateViewController(withIdentifier: "DetailsViewController")
+                as? DetailsViewController else { return }
+
         let row = indexPath.row
-        let selectedArticle = viewModel.getArticle(row: row)
-        detailsVC.article = selectedArticle
+        guard let article = viewModel.getArticle(row: row) else { return }
+        detailsVC.viewModel = DetailsViewModel(article: article)
         detailsVC.closure = { [weak self] updated in
             guard let self = self, let updated = updated else { return }
             guard row < self.viewModel.articleList.count else { return }
             self.viewModel.articleList[row] = updated
             self.tableView.reloadRows(at: [IndexPath(row: row, section: 0)], with: .automatic)
         }
-        
+
         navigationController?.pushViewController(detailsVC, animated: true)
     }
+
+
 }

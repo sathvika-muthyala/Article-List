@@ -1,7 +1,7 @@
 import UIKit
 
-final class ViewController: UIViewController {
-    
+final class ArticleListViewController: UIViewController {
+        
     @IBOutlet weak var tableView: UITableView!
     private let searchController = UISearchController(searchResultsController: nil)
 
@@ -34,7 +34,7 @@ final class ViewController: UIViewController {
         }
 }
 
-extension ViewController: UITableViewDataSource {
+extension ArticleListViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return viewModel.getCount()
@@ -64,8 +64,24 @@ extension ViewController: UITableViewDataSource {
     }
 }
 
-extension ViewController: UITableViewDelegate {
+extension ArticleListViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         return CGFloat(viewModel.heightOfRow)
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) -> Void {
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        guard let detailsVC = storyboard.instantiateViewController(withIdentifier: "DetailsViewController") as? DetailsViewController else {
+            return
+        }
+           
+        let selectedArticle = viewModel.getArticle(row: indexPath.row)
+        // pass the article to the details viewcontroller
+        detailsVC.article = selectedArticle
+        detailsVC.closure = { [weak self] article in
+                                print(article)
+                            }
+        
+        navigationController?.pushViewController(detailsVC, animated: true)
     }
 }

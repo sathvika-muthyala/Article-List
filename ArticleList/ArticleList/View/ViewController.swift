@@ -24,14 +24,14 @@ final class ArticleListViewController: UIViewController {
     }
     
     private func setupNavBar() {
-            title = "Articles"
-            navigationController?.navigationBar.prefersLargeTitles = false
-            searchController.obscuresBackgroundDuringPresentation = false
-            searchController.hidesNavigationBarDuringPresentation = true
-            searchController.searchBar.placeholder = "What's on your mind?"
-            navigationItem.searchController = searchController
-            definesPresentationContext = true
-        }
+        title = "Articles"
+        navigationController?.navigationBar.prefersLargeTitles = false
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.hidesNavigationBarDuringPresentation = true
+        searchController.searchBar.placeholder = "What's on your mind?"
+        navigationItem.searchController = searchController
+        definesPresentationContext = true
+    }
 }
 
 extension ArticleListViewController: UITableViewDataSource {
@@ -54,9 +54,13 @@ extension ArticleListViewController: UITableViewDataSource {
         cell.article.text = viewModel.getDescription(row: indexPath.row)
         cell.postedDate.text = viewModel.getFormattedDate(row: indexPath.row)
         cell.upload.image = UIImage(systemName: "square.and.arrow.up")
-        viewModel.getImage(row: indexPath.row) { image in
+
+        // Optional: avoid wrong images on reused cells
+        viewModel.getImage(row: indexPath.row) { [weak tableView] image in
             DispatchQueue.main.async {
-                cell.postImage.image = image
+                if let visibleCell = tableView?.cellForRow(at: indexPath) as? ArticleTableViewCell {
+                    visibleCell.postImage.image = image
+                }
             }
         }
         
@@ -69,18 +73,23 @@ extension ArticleListViewController: UITableViewDelegate {
         return CGFloat(viewModel.heightOfRow)
     }
     
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) -> Void {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true) // nicer UX
+
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         guard let detailsVC = storyboard.instantiateViewController(withIdentifier: "DetailsViewController") as? DetailsViewController else {
             return
         }
-           
-        let selectedArticle = viewModel.getArticle(row: indexPath.row)
-        // pass the article to the details viewcontroller
+        
+        let row = indexPath.row
+        let selectedArticle = viewModel.getArticle(row: row)
         detailsVC.article = selectedArticle
-        detailsVC.closure = { [weak self] article in
-                                print(article)
-                            }
+        detailsVC.closure = { [weak self] updated in
+            guard let self = self, let updated = updated else { return }
+            guard row < self.viewModel.articleList.count else { return }
+            self.viewModel.articleList[row] = updated
+            self.tableView.reloadRows(at: [IndexPath(row: row, section: 0)], with: .automatic)
+        }
         
         navigationController?.pushViewController(detailsVC, animated: true)
     }

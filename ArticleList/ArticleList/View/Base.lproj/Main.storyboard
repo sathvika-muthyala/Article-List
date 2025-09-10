@@ -133,8 +133,26 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="ecc-DN-kZB">
+                                <rect key="frame" x="16" y="59" width="361" height="360.66666666666669"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="360.67000000000002" id="1PW-Bv-hvV"/>
+                                </constraints>
+                            </imageView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="GzM-iE-4NZ">
+                                <rect key="frame" x="16" y="445.66666666666669" width="59" height="30"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="25"/>
+                                <color key="textColor" systemColor="systemCyanColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="O8E-Es-qgg">
+                                <rect key="frame" x="16" y="491.66666666666669" width="361" height="20.333333333333314"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" white="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                             <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="wOd-NU-4o6">
-                                <rect key="frame" x="30" y="390" width="333" height="34"/>
+                                <rect key="frame" x="30" y="653" width="333" height="34"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits"/>
                             </textField>
@@ -142,13 +160,24 @@
                         <viewLayoutGuide key="safeArea" id="JHp-zO-ndO"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
-                            <constraint firstItem="wOd-NU-4o6" firstAttribute="top" secondItem="JHp-zO-ndO" secondAttribute="top" constant="331" id="3bz-cw-DgR"/>
-                            <constraint firstItem="wOd-NU-4o6" firstAttribute="leading" secondItem="JHp-zO-ndO" secondAttribute="leading" constant="30" id="F9W-xm-9WA"/>
-                            <constraint firstItem="JHp-zO-ndO" firstAttribute="trailing" secondItem="wOd-NU-4o6" secondAttribute="trailing" constant="30" id="vKm-o6-Vap"/>
+                            <constraint firstItem="ecc-DN-kZB" firstAttribute="top" secondItem="JHp-zO-ndO" secondAttribute="top" id="3Ft-G0-qIz"/>
+                            <constraint firstItem="O8E-Es-qgg" firstAttribute="top" secondItem="GzM-iE-4NZ" secondAttribute="bottom" constant="16.000000000000057" id="9dE-yW-Bi8"/>
+                            <constraint firstItem="ecc-DN-kZB" firstAttribute="leading" secondItem="O8E-Es-qgg" secondAttribute="leading" id="CHg-uB-m4G"/>
+                            <constraint firstAttribute="trailing" secondItem="ecc-DN-kZB" secondAttribute="trailing" constant="16" id="Cwr-Bz-w3Z"/>
+                            <constraint firstItem="GzM-iE-4NZ" firstAttribute="top" secondItem="ecc-DN-kZB" secondAttribute="bottom" constant="26.000000000000057" id="DlY-nr-aK1"/>
+                            <constraint firstItem="JHp-zO-ndO" firstAttribute="trailing" secondItem="O8E-Es-qgg" secondAttribute="trailing" constant="16" id="dHs-n3-nBn"/>
+                            <constraint firstItem="ecc-DN-kZB" firstAttribute="leading" secondItem="JHp-zO-ndO" secondAttribute="leading" constant="16" id="gqN-cn-Jc3"/>
+                            <constraint firstItem="ecc-DN-kZB" firstAttribute="leading" secondItem="GzM-iE-4NZ" secondAttribute="leading" id="hvv-qQ-F5J"/>
+                            <constraint firstItem="wOd-NU-4o6" firstAttribute="centerX" secondItem="O8E-Es-qgg" secondAttribute="centerX" id="id9-zc-M8g"/>
+                            <constraint firstItem="wOd-NU-4o6" firstAttribute="leading" secondItem="JHp-zO-ndO" secondAttribute="leading" constant="30" id="sOC-Xa-w5O"/>
+                            <constraint firstItem="JHp-zO-ndO" firstAttribute="bottom" secondItem="wOd-NU-4o6" secondAttribute="bottom" constant="131" id="who-VX-n8x"/>
                         </constraints>
                     </view>
                     <connections>
-                        <outlet property="updateText" destination="wOd-NU-4o6" id="0PA-1T-sDW"/>
+                        <outlet property="articleImg" destination="ecc-DN-kZB" id="H6c-5m-ghc"/>
+                        <outlet property="articleTitle" destination="GzM-iE-4NZ" id="OaU-0D-SUO"/>
+                        <outlet property="body" destination="O8E-Es-qgg" id="Rbc-Uq-DYT"/>
+                        <outlet property="updateText" destination="wOd-NU-4o6" id="ghz-Sp-dzL"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="HQN-8D-XZg" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>

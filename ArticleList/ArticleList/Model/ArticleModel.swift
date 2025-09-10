@@ -17,7 +17,7 @@ struct Article: Decodable {
     let description: String?
     let url: String
     let imageUrl: String?
-    let dateOfPublication: String
+    let dateOfPublication: String?
     let content: String?
     
     enum CodingKeys: String, CodingKey {
@@ -29,6 +29,10 @@ struct Article: Decodable {
         case imageUrl = "urlToImage"
         case dateOfPublication = "publishedAt"
         case content
+    }
+    var dateOfPublicationOnly: String {
+        guard let dateOfPublication = dateOfPublication, dateOfPublication.count >= 10 else { return "" }
+        return String(dateOfPublication.prefix(10))
     }
 }
 

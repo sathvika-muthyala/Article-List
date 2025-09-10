@@ -60,16 +60,7 @@ class ArticleViewModel: ArticleViewModelProtocol {
     }
     
     func getFormattedDate(row: Int) -> String {
-        guard let isoString = getArticle(row: row)?.dateOfPublication else { return "" }
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime]
-        
-        if let date = isoFormatter.date(from: isoString) {
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateFormat = "yyyy-MM-dd"
-            return displayFormatter.string(from: date)
-        }
-        return isoString
+        return getArticle(row: row)?.dateOfPublicationOnly ?? ""
     }
     
     func getImage(row: Int, completion: @escaping (UIImage?) -> Void) {

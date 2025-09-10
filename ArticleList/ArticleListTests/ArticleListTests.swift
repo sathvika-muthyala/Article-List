@@ -5,10 +5,12 @@ import UIKit
 final class ArticleViewModelTests: XCTestCase {
 
     var viewModel: MockArticleViewModel!
+    var mockNetworkManager: Network?
 
     override func setUp() {
         super.setUp()
         viewModel = MockArticleViewModel()
+        mockNetworkManager = MockNetworkManager()
     }
 
     override func tearDown() {
@@ -20,6 +22,12 @@ final class ArticleViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.getCount(), 2)
     }
 
+    func testGetData() {
+        mockNetworkManager?.fetchData(from: "https://abc.com") { fetchedData in
+            XCTAssertNotNil(fetchedData)
+        }
+    }
+    
     func test_getTitle_returnsCorrectTitle() {
         XCTAssertEqual(viewModel.getTitle(row: 0), "Mock Article 1")
         XCTAssertEqual(viewModel.getTitle(row: 1), "Mock Article 2")
@@ -27,7 +35,7 @@ final class ArticleViewModelTests: XCTestCase {
 
     func test_getAuthor_returnsAuthorOrUnknown() {
         XCTAssertEqual(viewModel.getAuthor(row: 0), "Alice")
-        XCTAssertEqual(viewModel.getAuthor(row: 1), "Unknown") 
+        XCTAssertEqual(viewModel.getAuthor(row: 1), "Unknown")
     }
 
     func test_getDescription_returnsCorrectDescription() {

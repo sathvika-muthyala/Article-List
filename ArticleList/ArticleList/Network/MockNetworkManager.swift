@@ -6,61 +6,74 @@
 //
 
 import Foundation
-
-class MockNetworkManager: Network {
+final class MockNetworkManager: Network {
     static let shared = MockNetworkManager()
-    func fetchData(from serverUrl: String, closure: @escaping (ArticleList?) -> Void) {
-        func getData(from serverUrl: String?, closure: @escaping (Data?) -> Void) {
-            guard let imageUrl = serverUrl, let serverURL = URL(string: imageUrl) else {
-                print("Server URL is invalid")
-                closure(nil)
-                return
-            }
-            var articleJsonString: String? =  """
-            {
-            "status": "ok",
-            "totalResults": 3457,
-            "articles": [
-            {
-             "source": {
-               "id": null,
-               "name": "Seekingalpha.com"
-             },
-             "author": "Victor Dergunov",
-             "title": "Tesla: The Top Is Here",
-             "description": "To say that Tesla has been on fire lately is an understatement. The stock has gone parabolic, Bitcoin like, vertical in recent weeks.The company's market cap is now around $160 billion, and its projected 2020 P/E multiple is roughly 113.Stocks cannot continuo…",
-             "url": "https://seekingalpha.com/article/4321590-tesla-top-is",
-             "urlToImage": "https://static.seekingalpha.com/uploads/2020/2/5/48200183-15809104384836764_origin.jpg",
-             "publishedAt": "2020-02-05T15:47:40Z",
-             "content": "Image Source\r\nTesla's Top Is Here\r\nTeslas (TSLA) stock has entered full throttle ludicrous mode, as shares have literally turned vertical in recent sessions. Due to what I referred to as the short squeeze of the century in a previous article, as well as vario… [+5303 chars]"
-            }
-            ]
-            }
-            """
-            
-            let data = articleJsonString?.data(using: .utf8)
-            guard let data = data else {
-                print("No data returned from the server")
-                closure(nil)
-                return
-            }
-            
-            closure(data)
+    private init() {}
+    var mockImageData: Data?
+
+    var shouldFail: Bool = false
+
+    var stubArticlesJSON: String = """
+    {
+      "status": "ok",
+      "totalResults": 1,
+      "articles": [
+        {
+          "source": { "id": null, "name": "MockNews" },
+          "author": "Jane Doe",
+          "title": "Mock Title",
+          "description": "Mock description from mock network.",
+          "url": "https://example.com/mock-article",
+          "urlToImage": "https://example.com/mock-image.jpg",
+          "publishedAt": "2025-09-10T12:34:56Z",
+          "content": "Mock content…"
         }
-        
-        func parse(data: Data?) -> [ArticleList] {
-            guard let data = data else {
-                print("No data to parse")
-                return []
+      ]
+    }
+    """
+
+    // MARK: - Network
+
+    func getData(from serverUrl: String?, closure: @escaping (Data?) -> Void) {
+        guard !shouldFail else {
+            closure(nil)
+            return
+        }
+
+        // No URL or non-image URL → return the stub JSON bytes
+        guard let urlString = serverUrl, !urlString.isEmpty else {
+            closure(stubArticlesJSON.data(using: .utf8))
+            return
+        }
+
+        // If it looks like an image request, return image bytes
+        let lower = urlString.lowercased()
+        let isImage = lower.hasSuffix(".png") || lower.hasSuffix(".jpg") || lower.hasSuffix(".jpeg") || lower.contains("image")
+        if isImage {
+            if let img = mockImageData {
+                closure(img)
+            } else {
+                // 1x1 transparent PNG
+                let pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+                closure(Data(base64Encoded: pngBase64))
             }
-            
-            do {
-                let articleList = try JSONDecoder().decode(ArticleList.self, from: data)
-                closure(articleList)
-            } catch {
-                print("Error parsing JSON: \(error)")
-            }
-            
+            return
+        }
+
+        // Default to JSON for everything else
+        closure(stubArticlesJSON.data(using: .utf8))
+    }
+
+    func parse(data: Data?) -> [Article]? {
+        guard let data = data else {
+            print("No data to parse")
+            return []
+        }
+        do {
+            let decoded = try JSONDecoder().decode(ArticleList.self, from: data)
+            return decoded.articles ?? []
+        } catch {
+            print("Mock decode error:", error)
             return []
         }
     }

@@ -30,10 +30,19 @@ class ArticleViewModel: ArticleViewModelProtocol {
         self.networkManager = networkManager as! NetworkManager
         }
     
-    func getDataFromServer(closure: @escaping (() -> Void)) {
-        networkManager.fetchData(from: Server.articleApi.rawValue) { [weak self] fetchedList in
-            self?.articleList = fetchedList?.articles ?? []
-            closure()
+    func getDataFromServer(closure: @escaping () -> Void) {
+        networkManager.getData(from: Server.articleApi.rawValue) { [weak self] data in
+            guard let self = self else { return }
+
+            // Decode JSON bytes into [Article]
+            self.articleList = self.networkManager.parse(data: data) ?? []
+
+            // If you also keep a filtered/visible list, mirror it here:
+            // self.visibleList = self.articleList
+
+            DispatchQueue.main.async {
+                closure() // tell the VC to reload UI etc.
+            }
         }
     }
     
@@ -64,18 +73,16 @@ class ArticleViewModel: ArticleViewModelProtocol {
     }
     
     func getImage(row: Int, completion: @escaping (UIImage?) -> Void) {
-        guard let urlString = getArticle(row: row)?.imageUrl,
-              let url = URL(string: urlString) else {
-            completion(nil)
+        guard let urlString = getArticle(row: row)?.imageUrl, !urlString.isEmpty else {
+            DispatchQueue.main.async { completion(nil) }
             return
         }
-        
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            guard let data = data, let img = UIImage(data: data) else {
-                completion(nil)
-                return
+        networkManager.getData(from: urlString) { data in
+            let image = data.flatMap(UIImage.init(data:))
+            DispatchQueue.main.async {
+                completion(image)
             }
-            completion(img)
-        }.resume()
+        }
     }
+
 }

@@ -8,38 +8,52 @@
 import Foundation
 
 protocol Network {
-    func fetchData(from serverUrl: String, closure: @escaping (ArticleList?) -> Void)
+    
+    func getData(from serverUrl: String?, closure: @escaping (Data?) -> Void)
+    func parse(data: Data?) -> [Article]?
+    
 }
 
 class NetworkManager: Network {
+    
     static let shared = NetworkManager()
-
-    func fetchData(from serverUrl: String, closure: @escaping (ArticleList?) -> Void) {
-
-        guard let serverURL = URL(string: serverUrl) else {
+    
+    func getData(from serverUrl: String?, closure: @escaping (Data?) -> Void) {
+        guard let imageUrl = serverUrl, let serverURL = URL(string: imageUrl) else {
             print("Server URL is invalid")
+            closure(nil)
             return
         }
         
-        let urlSession = URLSession.shared
-        urlSession.dataTask(with: URLRequest(url: serverURL)) { data, response, error in
-            
+        URLSession.shared.dataTask(with: serverURL) { data, response, error in
             if let error = error {
                 print("Error fetching data: \(error)")
+                closure(nil)
                 return
             }
             
             guard let data = data else {
                 print("No data returned from the server")
+                closure(nil)
                 return
             }
             
-            do {
-                let articleList = try JSONDecoder().decode(ArticleList.self, from: data)
-                closure(articleList)
-            } catch {
-                print("Error parsing JSON: \(error)")
-            }
+            closure(data)
         }.resume()
+    }
+    
+    func parse(data: Data?) -> [Article]? {
+        guard let data = data else {
+            print("No data to parse")
+            return []
+        }
+        do {
+            let decoder = JSONDecoder()
+            let fetchedResult = try decoder.decode(ArticleList.self, from: data)
+            return fetchedResult.articles
+        } catch {
+            print(error)
+        }
+        return []
     }
 }

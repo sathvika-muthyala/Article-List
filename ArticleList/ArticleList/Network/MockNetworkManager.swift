@@ -40,7 +40,6 @@ final class MockNetworkManager: Network {
             return
         }
 
-        // No URL or non-image URL → return the stub JSON bytes
         guard let urlString = serverUrl, !urlString.isEmpty else {
             closure(stubArticlesJSON.data(using: .utf8))
             return

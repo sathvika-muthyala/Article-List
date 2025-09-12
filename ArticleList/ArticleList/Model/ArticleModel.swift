@@ -7,7 +7,7 @@
 import Foundation
 
 struct ArticleList: Decodable {
-    var articles: [Article]?
+    var articles: [Article]
 }
 
 struct Article: Decodable {

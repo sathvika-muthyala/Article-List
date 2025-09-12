@@ -9,8 +9,9 @@ import UIKit
 
 protocol ArticleViewModelProtocol {
     var articleList: [Article] { get }
-    var heightOfRow: Int { get }
-    func getDataFromServer(closure: @escaping (() -> Void))
+    var heightOfRow: Int {get}
+    func getDataFromServer(closure: @escaping () -> Void)
+    func getArticle(row: Int) -> Article?
     func getCount() -> Int
     func getTitle(row: Int) -> String
     func getAuthor(row: Int) -> String
@@ -37,11 +38,8 @@ class ArticleViewModel: ArticleViewModelProtocol {
             // Decode JSON bytes into [Article]
             self.articleList = self.networkManager.parse(data: data) ?? []
 
-            // If you also keep a filtered/visible list, mirror it here:
-            // self.visibleList = self.articleList
-
             DispatchQueue.main.async {
-                closure() // tell the VC to reload UI etc.
+                closure()
             }
         }
     }

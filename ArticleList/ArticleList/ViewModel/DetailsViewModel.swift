@@ -8,7 +8,7 @@
 import UIKit
 
 final class DetailsViewModel {
-    private(set) var article: Article
+    var article: Article
 
     init(article: Article) {
         self.article = article

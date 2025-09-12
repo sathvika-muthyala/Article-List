@@ -19,7 +19,7 @@ class NetworkManager: Network {
     static let shared = NetworkManager()
     
     func getData(from serverUrl: String?, closure: @escaping (Data?) -> Void) {
-        guard let imageUrl = serverUrl, let serverURL = URL(string: imageUrl) else {
+        guard let apiUrl = serverUrl, let serverURL = URL(string: apiUrl) else {
             print("Server URL is invalid")
             closure(nil)
             return

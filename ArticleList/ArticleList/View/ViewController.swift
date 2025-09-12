@@ -56,14 +56,20 @@ extension ArticleListViewController: UITableViewDataSource {
         cell.upload.image = UIImage(systemName: "square.and.arrow.up")
 
         // Optional: avoid wrong images on reused cells
-        viewModel.getImage(row: indexPath.row) { [weak tableView] image in
-            DispatchQueue.main.async {
-                if let visibleCell = tableView?.cellForRow(at: indexPath) as? ArticleTableViewCell {
-                    visibleCell.postImage.image = image
-                }
+//        viewModel.getImage(row: indexPath.row) { [weak tableView] image in
+//            DispatchQueue.main.async {
+//                if let visibleCell = tableView?.cellForRow(at: indexPath) as? ArticleTableViewCell {
+//                    visibleCell.postImage.image = image
+//                }
+//            }
+//        }
+        
+        viewModel.getImage(row: indexPath.row) {[weak tableView] image in DispatchQueue.main.async{
+            if let visibleCell = tableView?.cellForRow(at: indexPath) as? ArticleTableViewCell {
+                visibleCell.postImage.image = image
             }
         }
-        
+        }
         return cell
     }
 }

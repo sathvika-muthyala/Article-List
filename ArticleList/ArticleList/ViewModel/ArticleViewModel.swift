@@ -9,8 +9,9 @@ import UIKit
 
 protocol ArticleViewModelProtocol {
     var articleList: [Article] { get }
-    var heightOfRow: Int { get }
-    func getDataFromServer(closure: @escaping (() -> Void))
+    var heightOfRow: Int {get}
+    func getDataFromServer(closure: @escaping () -> Void)
+    func getArticle(row: Int) -> Article?
     func getCount() -> Int
     func getTitle(row: Int) -> String
     func getAuthor(row: Int) -> String
@@ -26,10 +27,20 @@ class ArticleViewModel: ArticleViewModelProtocol {
     var networkManager = NetworkManager.shared
     var heightOfRow: Int = Height.rowHeight.rawValue
     
-    func getDataFromServer(closure: @escaping (() -> Void)) {
-        networkManager.fetchData(from: Server.articleApi.rawValue) { [weak self] fetchedList in
-            self?.articleList = fetchedList?.articles ?? []
-            closure()
+    init(networkManager: Network = NetworkManager.shared) {
+        self.networkManager = networkManager as! NetworkManager
+        }
+    
+    func getDataFromServer(closure: @escaping () -> Void) {
+        networkManager.getData(from: Server.articleApi.rawValue) { [weak self] data in
+            guard let self = self else { return }
+
+            // Decode JSON bytes into [Article]
+            self.articleList = self.networkManager.parse(data: data) ?? []
+
+            DispatchQueue.main.async {
+                closure()
+            }
         }
     }
     
@@ -56,31 +67,20 @@ class ArticleViewModel: ArticleViewModelProtocol {
     }
     
     func getFormattedDate(row: Int) -> String {
-        guard let isoString = getArticle(row: row)?.dateOfPublication else { return "" }
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime]
-        
-        if let date = isoFormatter.date(from: isoString) {
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateFormat = "yyyy-MM-dd"
-            return displayFormatter.string(from: date)
-        }
-        return isoString
+        return getArticle(row: row)?.dateOfPublicationOnly ?? ""
     }
     
     func getImage(row: Int, completion: @escaping (UIImage?) -> Void) {
-        guard let urlString = getArticle(row: row)?.imageUrl,
-              let url = URL(string: urlString) else {
-            completion(nil)
+        guard let urlString = getArticle(row: row)?.imageUrl, !urlString.isEmpty else {
+            DispatchQueue.main.async { completion(nil) }
             return
         }
-        
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            guard let data = data, let img = UIImage(data: data) else {
-                completion(nil)
-                return
+        networkManager.getData(from: urlString) { data in
+            let image = data.flatMap(UIImage.init(data:))
+            DispatchQueue.main.async {
+                completion(image)
             }
-            completion(img)
-        }.resume()
+        }
     }
+
 }

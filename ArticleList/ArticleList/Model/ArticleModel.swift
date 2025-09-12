@@ -7,17 +7,17 @@
 import Foundation
 
 struct ArticleList: Decodable {
-    var articles: [Article]?
+    var articles: [Article]
 }
 
 struct Article: Decodable {
     let source: Source
-    let author: String?
-    let title: String
+    var author: String?
+    var title: String
     let description: String?
     let url: String
     let imageUrl: String?
-    let dateOfPublication: String
+    let dateOfPublication: String?
     let content: String?
     
     enum CodingKeys: String, CodingKey {
@@ -29,6 +29,10 @@ struct Article: Decodable {
         case imageUrl = "urlToImage"
         case dateOfPublication = "publishedAt"
         case content
+    }
+    var dateOfPublicationOnly: String {
+        guard let dateOfPublication = dateOfPublication, dateOfPublication.count >= 10 else { return "" }
+        return String(dateOfPublication.prefix(10))
     }
 }
 

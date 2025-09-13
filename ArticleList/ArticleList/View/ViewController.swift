@@ -1,11 +1,12 @@
 import UIKit
 
 final class ArticleListViewController: UIViewController {
-        
+    
     @IBOutlet weak var tableView: UITableView!
     private let searchController = UISearchController(searchResultsController: nil)
-
     private var viewModel = ArticleViewModel()
+    
+    private var searchDebounceWorkItem: DispatchWorkItem?   // 🔹 for debounce
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -17,9 +18,7 @@ final class ArticleListViewController: UIViewController {
     
     private func fetchArticles() {
         viewModel.getDataFromServer { [weak self] in
-            DispatchQueue.main.async {
-                self?.tableView.reloadData()
-            }
+            self?.tableView.reloadData()
         }
     }
     
@@ -29,10 +28,12 @@ final class ArticleListViewController: UIViewController {
         searchController.obscuresBackgroundDuringPresentation = false
         searchController.hidesNavigationBarDuringPresentation = true
         searchController.searchBar.placeholder = "What's on your mind?"
+        searchController.searchResultsUpdater = self
         navigationItem.searchController = searchController
         definesPresentationContext = true
     }
 }
+
 
 extension ArticleListViewController: UITableViewDataSource {
     
@@ -50,34 +51,13 @@ extension ArticleListViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         
-        cell.title.text = viewModel.getAuthor(row: indexPath.row)
-        cell.article.text = viewModel.getDescription(row: indexPath.row)
-        cell.postedDate.text = viewModel.getFormattedDate(row: indexPath.row)
-        cell.upload.image = UIImage(systemName: "square.and.arrow.up")
-
-        // Optional: avoid wrong images on reused cells
-//        viewModel.getImage(row: indexPath.row) { [weak tableView] image in
-//            DispatchQueue.main.async {
-//                if let visibleCell = tableView?.cellForRow(at: indexPath) as? ArticleTableViewCell {
-//                    visibleCell.postImage.image = image
-//                }
-//            }
-//        }
-        
-        viewModel.getImage(row: indexPath.row) {[weak tableView] image in DispatchQueue.main.async{
-            if let visibleCell = tableView?.cellForRow(at: indexPath) as? ArticleTableViewCell {
-                visibleCell.postImage.image = image
-            }
-        }
-        }
+        cell.configure(with: viewModel, at: indexPath, in: tableView)
         return cell
     }
+
 }
 
 extension ArticleListViewController: UITableViewDelegate {
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return CGFloat(viewModel.heightOfRow)
-    }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
@@ -100,4 +80,23 @@ extension ArticleListViewController: UITableViewDelegate {
     }
 
 
+}
+
+extension ArticleListViewController: UISearchResultsUpdating {
+    func updateSearchResults(for searchController: UISearchController) {
+        let query = searchController.searchBar.text ?? ""
+        
+        // Cancel any existing work
+        searchDebounceWorkItem?.cancel()
+        
+        // Create new work item with debounce of 1 sec
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.viewModel.filterArticles(query: query)
+            DispatchQueue.main.async {
+                self?.tableView.reloadData()
+            }
+        }
+        searchDebounceWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
+    }
 }

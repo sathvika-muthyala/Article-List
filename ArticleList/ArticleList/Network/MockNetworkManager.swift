@@ -71,7 +71,7 @@ final class MockNetworkManager: Network {
         }
         do {
             let decoded = try JSONDecoder().decode(ArticleList.self, from: data)
-            return decoded.articles ?? []
+            return decoded.articles
         } catch {
             print("Mock decode error:", error)
             return []

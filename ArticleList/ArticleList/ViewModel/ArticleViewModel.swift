@@ -22,40 +22,35 @@ protocol ArticleViewModelProtocol {
 
 
 class ArticleViewModel: ArticleViewModelProtocol {
-    
     var articleList: [Article] = []
+    var filteredList: [Article] = []
     var networkManager = NetworkManager.shared
     var heightOfRow: Int = Height.rowHeight.rawValue
     
     init(networkManager: Network = NetworkManager.shared) {
         self.networkManager = networkManager as! NetworkManager
-        }
+    }
     
     func getDataFromServer(closure: @escaping () -> Void) {
         networkManager.getData(from: Server.articleApi.rawValue) { [weak self] data in
             guard let self = self else { return }
-
-            // Decode JSON bytes into [Article]
             self.articleList = self.networkManager.parse(data: data) ?? []
-
-            DispatchQueue.main.async {
-                closure()
-            }
+            self.filteredList = self.articleList  // start with full list
+            DispatchQueue.main.async { closure() }
         }
     }
     
     func getCount() -> Int {
-        return articleList.count
+        return filteredList.count
     }
     
     func getArticle(row: Int) -> Article? {
-        guard row >= 0, row < articleList.count else { return nil }
-        return articleList[row]
+        guard row >= 0, row < filteredList.count else { return nil }
+        return filteredList[row]
     }
     
     func getTitle(row: Int) -> String {
-        guard let article = getArticle(row: row) else { return "" }
-        return article.title
+        return getArticle(row: row)?.title ?? ""
     }
     
     func getAuthor(row: Int) -> String {
@@ -70,6 +65,19 @@ class ArticleViewModel: ArticleViewModelProtocol {
         return getArticle(row: row)?.dateOfPublicationOnly ?? ""
     }
     
+    func filterArticles(query: String) {
+        if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            filteredList = articleList
+        } else {
+            filteredList = articleList.filter {
+                $0.title.localizedCaseInsensitiveContains(query) ||
+                ($0.description?.localizedCaseInsensitiveContains(query) ?? false) ||
+                ($0.author?.localizedCaseInsensitiveContains(query) ?? false)
+            }
+        }
+    }
+
+
     func getImage(row: Int, completion: @escaping (UIImage?) -> Void) {
         guard let urlString = getArticle(row: row)?.imageUrl, !urlString.isEmpty else {
             DispatchQueue.main.async { completion(nil) }

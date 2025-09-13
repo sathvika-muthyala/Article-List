@@ -36,23 +36,5 @@ final class DetailsViewModel {
                 completion(image)
             }
         }
-//        guard let path = article.imageUrl, !path.isEmpty else {
-//            completion(nil); return
-//        }
-//
-//        if let img = UIImage(named: path) {
-//            completion(img); return
-//        }
-//
-//        guard let url = URL(string: path) else {
-//            completion(nil); return
-//        }
-//
-//        URLSession.shared.dataTask(with: url) { data, _, _ in
-//            guard let data = data, let img = UIImage(data: data) else {
-//                completion(nil); return
-//            }
-//            completion(img)
-//        }.resume()
     }
 }

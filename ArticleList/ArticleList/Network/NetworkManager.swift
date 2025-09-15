@@ -9,7 +9,7 @@ import Foundation
 
 protocol Network {
     
-    func getData(from serverUrl: String?, closure: @escaping (Data?) -> Void)
+    func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void)
     func parse(data: Data?) -> [Article]?
     
 }
@@ -17,28 +17,29 @@ protocol Network {
 class NetworkManager: Network {
     
     static let shared = NetworkManager()
+    var state: NetworkState = .isLoading
     
-    func getData(from serverUrl: String?, closure: @escaping (Data?) -> Void) {
+    func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void) {
         guard let apiUrl = serverUrl, let serverURL = URL(string: apiUrl) else {
-            print("Server URL is invalid")
-            closure(nil)
+            state = .invalidURL
+            closure(state)
             return
         }
         
-        URLSession.shared.dataTask(with: serverURL) { data, response, error in
-            if let error = error {
-                print("Error fetching data: \(error)")
-                closure(nil)
+        URLSession.shared.dataTask(with: serverURL) { [self] data, response, error in
+            if let _ = error {
+                self.state = .errorFetchingData
+                closure(self.state)
                 return
             }
             
             guard let data = data else {
-                print("No data returned from the server")
-                closure(nil)
+                self.state = .noDataFromServer
+                closure(state)
                 return
             }
-            
-            closure(data)
+            self.state = .success(data)
+            closure(self.state)
         }.resume()
     }
     

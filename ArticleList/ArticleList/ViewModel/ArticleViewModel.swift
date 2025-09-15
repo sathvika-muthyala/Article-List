@@ -9,8 +9,9 @@ import UIKit
 
 protocol ArticleViewModelProtocol {
     var articleList: [Article] { get }
+    var errorMessage: String? { get }
     var heightOfRow: Int {get}
-    func getDataFromServer(closure: @escaping () -> Void)
+    func getDataFromServer(closure: @escaping (NetworkState?) -> Void)
     func getArticle(row: Int) -> Article?
     func getCount() -> Int
     func getTitle(row: Int) -> String
@@ -22,6 +23,8 @@ protocol ArticleViewModelProtocol {
 
 
 class ArticleViewModel: ArticleViewModelProtocol {
+    
+    var errorState: NetworkState?
     var articleList: [Article] = []
     var filteredList: [Article] = []
     var networkManager = NetworkManager.shared
@@ -31,12 +34,21 @@ class ArticleViewModel: ArticleViewModelProtocol {
         self.networkManager = networkManager as! NetworkManager
     }
     
-    func getDataFromServer(closure: @escaping () -> Void) {
-        networkManager.getData(from: Server.articleApi.rawValue) { [weak self] data in
+    func getDataFromServer(closure: @escaping (NetworkState?) -> Void) {
+        networkManager.getData(from: Server.articleApi.rawValue) { [weak self] fetchedState in
             guard let self = self else { return }
-            self.articleList = self.networkManager.parse(data: data) ?? []
-            self.filteredList = self.articleList  // start with full list
-            DispatchQueue.main.async { closure() }
+            
+            switch fetchedState {
+            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
+                self.errorState = fetchedState
+                break
+            case .success(let data):
+                self.articleList = self.networkManager.parse(data: data) ?? []
+                self.filteredList = self.articleList  // start with full list
+                break
+            }
+            
+            DispatchQueue.main.async { closure(self.errorState) }
         }
     }
     
@@ -83,12 +95,41 @@ class ArticleViewModel: ArticleViewModelProtocol {
             DispatchQueue.main.async { completion(nil) }
             return
         }
-        networkManager.getData(from: urlString) { data in
-            let image = data.flatMap(UIImage.init(data:))
-            DispatchQueue.main.async {
-                completion(image)
+
+        networkManager.getData(from: urlString) { state in
+            switch state {
+            case .success(let data):
+                let image = UIImage(data: data)
+                DispatchQueue.main.async {
+                    completion(image)
+                }
+
+            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
             }
         }
     }
 
+
+}
+
+extension ArticleViewModel {
+    var errorMessage: String? {
+        guard let errorState = errorState else { return ""}
+        switch errorState {
+        case .isLoading:
+            return "Data Loading"
+        case .invalidURL:
+            return "Invalid URL"
+        case .errorFetchingData:
+            return "Error fetching data"
+        case .noDataFromServer:
+            return "No data from server"
+        default:
+            return ""
+            
+        }
+    }
 }

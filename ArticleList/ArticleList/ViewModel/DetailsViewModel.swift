@@ -30,11 +30,20 @@ final class DetailsViewModel {
             DispatchQueue.main.async { completion(nil) }
             return
         }
-        networkManager.getData(from: urlString) { data in
-            let image = data.flatMap(UIImage.init(data:))
-            DispatchQueue.main.async {
-                completion(image)
+
+        networkManager.getData(from: urlString) { state in
+            switch state {
+            case .success(let data):
+                let image = UIImage(data: data)
+                DispatchQueue.main.async {
+                    completion(image)
+                }
+            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
             }
         }
     }
+
 }

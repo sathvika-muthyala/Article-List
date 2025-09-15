@@ -5,8 +5,17 @@ final class ArticleListViewController: UIViewController {
     @IBOutlet weak var tableView: UITableView!
     private let searchController = UISearchController(searchResultsController: nil)
     private var viewModel = ArticleViewModel()
+    private var coordinatorFlowDelegate: ArticleListCoordinatorProtocol?
+    private var searchDebounceWorkItem: DispatchWorkItem?
     
-    private var searchDebounceWorkItem: DispatchWorkItem?   // 🔹 for debounce
+//    init(viewModel: ArticleListCoordinatorProtocol) {
+//        self.viewModel = viewModel as! ArticleViewModel
+//        super.init(nibName: nil, bundle: nil)
+//    }
+//    
+//    required init?(coder: NSCoder) {
+//        fatalError("init(coder:) has not been implemented")
+//    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -14,11 +23,19 @@ final class ArticleListViewController: UIViewController {
         tableView.delegate = self
         setupNavBar()
         fetchArticles()
+        initializeCoordinator()
     }
     
     private func fetchArticles() {
-        viewModel.getDataFromServer { [weak self] in
-            self?.tableView.reloadData()
+     viewModel.getDataFromServer { [weak self] errorState in
+            guard let self = self else { return }
+            guard let _ = errorState else {
+                self.tableView.reloadData()
+                return
+            }
+            
+            // Show Error message
+         self.showAlert(title: "Article List", message: viewModel.errorMessage ?? "")
         }
     }
     
@@ -31,6 +48,12 @@ final class ArticleListViewController: UIViewController {
         searchController.searchResultsUpdater = self
         navigationItem.searchController = searchController
         definesPresentationContext = true
+    }
+    
+    private func initializeCoordinator() {
+        if coordinatorFlowDelegate == nil {
+                coordinatorFlowDelegate = ArticleListCoordinator(navigationController: navigationController)
+            }
     }
 }
 
@@ -75,8 +98,10 @@ extension ArticleListViewController: UITableViewDelegate {
             self.viewModel.articleList[row] = updated
             self.tableView.reloadRows(at: [IndexPath(row: row, section: 0)], with: .automatic)
         }
+        
+        print(coordinatorFlowDelegate!)
+        coordinatorFlowDelegate?.navigateToDetail(detailsVC)
 
-        navigationController?.pushViewController(detailsVC, animated: true)
     }
 
 
@@ -85,11 +110,7 @@ extension ArticleListViewController: UITableViewDelegate {
 extension ArticleListViewController: UISearchResultsUpdating {
     func updateSearchResults(for searchController: UISearchController) {
         let query = searchController.searchBar.text ?? ""
-        
-        // Cancel any existing work
         searchDebounceWorkItem?.cancel()
-        
-        // Create new work item with debounce of 1 sec
         let workItem = DispatchWorkItem { [weak self] in
             self?.viewModel.filterArticles(query: query)
             DispatchQueue.main.async {

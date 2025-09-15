@@ -34,6 +34,8 @@ final class ArticleListViewController: UIViewController {
     }
 }
 
+//MARK: TableView DataSource Methods
+
 extension ArticleListViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -73,6 +75,8 @@ extension ArticleListViewController: UITableViewDataSource {
         return cell
     }
 }
+
+//MARK: TableView Delegate Methods
 
 extension ArticleListViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {

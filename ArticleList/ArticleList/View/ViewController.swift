@@ -7,15 +7,7 @@ final class ArticleListViewController: UIViewController {
     private var viewModel = ArticleViewModel()
     private var coordinatorFlowDelegate: ArticleListCoordinatorProtocol?
     private var searchDebounceWorkItem: DispatchWorkItem?
-    
-//    init(viewModel: ArticleListCoordinatorProtocol) {
-//        self.viewModel = viewModel as! ArticleViewModel
-//        super.init(nibName: nil, bundle: nil)
-//    }
-//    
-//    required init?(coder: NSCoder) {
-//        fatalError("init(coder:) has not been implemented")
-//    }
+    private let refreshControlView = UIRefreshControl()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,6 +16,7 @@ final class ArticleListViewController: UIViewController {
         setupNavBar()
         fetchArticles()
         initializeCoordinator()
+        setupRefreshControl()
     }
     
     private func fetchArticles() {
@@ -33,8 +26,6 @@ final class ArticleListViewController: UIViewController {
                 self.tableView.reloadData()
                 return
             }
-            
-            // Show Error message
          self.showAlert(title: "Article List", message: viewModel.errorMessage ?? "")
         }
     }
@@ -55,6 +46,19 @@ final class ArticleListViewController: UIViewController {
                 coordinatorFlowDelegate = ArticleListCoordinator(navigationController: navigationController)
             }
     }
+    
+    private func setupRefreshControl() {
+            refreshControlView.attributedTitle = NSAttributedString(string: "Pull to refresh")
+            refreshControlView.addTarget(self, action: #selector(refreshData), for: .valueChanged)
+            tableView.refreshControl = refreshControlView
+        }
+        
+    @objc private func refreshData() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            self.refreshControlView.endRefreshing()
+            self.tableView.reloadData()
+        }
+    }
 }
 
 
@@ -66,14 +70,13 @@ extension ArticleListViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView,
                    cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        
         guard let cell = tableView.dequeueReusableCell(
             withIdentifier: "ArticleCell",
             for: indexPath
         ) as? ArticleTableViewCell else {
             return UITableViewCell()
         }
-        
+    
         cell.configure(with: viewModel, at: indexPath, in: tableView)
         return cell
     }
@@ -88,7 +91,7 @@ extension ArticleListViewController: UITableViewDelegate {
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         guard let detailsVC = storyboard.instantiateViewController(withIdentifier: "DetailsViewController")
                 as? DetailsViewController else { return }
-
+        
         let row = indexPath.row
         guard let article = viewModel.getArticle(row: row) else { return }
         detailsVC.viewModel = DetailsViewModel(article: article)
@@ -99,12 +102,9 @@ extension ArticleListViewController: UITableViewDelegate {
             self.tableView.reloadRows(at: [IndexPath(row: row, section: 0)], with: .automatic)
         }
         
-        print(coordinatorFlowDelegate!)
         coordinatorFlowDelegate?.navigateToDetail(detailsVC)
 
     }
-
-
 }
 
 extension ArticleListViewController: UISearchResultsUpdating {

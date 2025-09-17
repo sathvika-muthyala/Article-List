@@ -8,27 +8,46 @@ final class ArticleListViewController: UIViewController {
     private var coordinatorFlowDelegate: ArticleListCoordinatorProtocol?
     private var searchDebounceWorkItem: DispatchWorkItem?
     private let refreshControlView = UIRefreshControl()
+    private let activityIndicator = UIActivityIndicatorView(style: .large)
     
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.dataSource = self
         tableView.delegate = self
         setupNavBar()
+        setupLoader()
         fetchArticles()
         initializeCoordinator()
         setupRefreshControl()
     }
     
     private func fetchArticles() {
-     viewModel.getDataFromServer { [weak self] errorState in
+        activityIndicator.startAnimating()
+        view.bringSubviewToFront(activityIndicator)
+        tableView.isHidden = true
+
+        let startTime = Date()
+
+        viewModel.getDataFromServer { [weak self] errorState in
             guard let self = self else { return }
-            guard let _ = errorState else {
-                self.tableView.reloadData()
-                return
+
+            DispatchQueue.main.async {
+                let elapsed = Date().timeIntervalSince(startTime)
+                let delay = max(0, 1.0 - elapsed)
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    self.activityIndicator.stopAnimating()
+                    self.tableView.isHidden = false
+                    if let _ = errorState {
+                        self.showAlert(title: "Article List",
+                                       message: self.viewModel.errorMessage ?? "")
+                    } else {
+                        self.tableView.reloadData()
+                    }
+                }
             }
-         self.showAlert(title: "Article List", message: viewModel.errorMessage ?? "")
         }
     }
+
     
     private func setupNavBar() {
         title = "Articles"
@@ -48,16 +67,32 @@ final class ArticleListViewController: UIViewController {
     }
     
     private func setupRefreshControl() {
-            refreshControlView.attributedTitle = NSAttributedString(string: "Pull to refresh")
             refreshControlView.addTarget(self, action: #selector(refreshData), for: .valueChanged)
             tableView.refreshControl = refreshControlView
         }
         
     @objc private func refreshData() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.refreshControlView.endRefreshing()
-            self.tableView.reloadData()
+        viewModel.getDataFromServer { [weak self] errorState in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.refreshControlView.endRefreshing()
+                
+                if let _ = errorState {
+                    self.showAlert(title: "Article List",
+                                   message: self.viewModel.errorMessage ?? "Something went wrong")
+                } else {
+                    self.tableView.reloadData()
+                }
+            }
         }
+    }
+
+    private func setupLoader() {
+        activityIndicator.color = .systemCyan
+        activityIndicator.center = view.center
+        activityIndicator.hidesWhenStopped = true
+        view.addSubview(activityIndicator)
     }
 }
 

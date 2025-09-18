@@ -5,7 +5,7 @@ final class ArticleListViewController: UIViewController {
     @IBOutlet weak var tableView: UITableView!
     private let searchController = UISearchController(searchResultsController: nil)
     private var viewModel = ArticleViewModel()
-    private var coordinatorFlowDelegate: ArticleListCoordinatorProtocol?
+    var coordinatorFlowDelegate: ArticleListCoordinatorProtocol?
     private var searchDebounceWorkItem: DispatchWorkItem?
     private let refreshControlView = UIRefreshControl()
     private let activityIndicator = UIActivityIndicatorView(style: .large)

@@ -7,7 +7,7 @@ class DetailsViewController: UIViewController {
     @IBOutlet weak var body: UILabel!
 
     var viewModel: DetailsViewModel!
-    var closure: ((Article?) -> Void?)? = nil
+    var closure: ((Article?) -> Void)?
 
     override func viewDidLoad() {
         super.viewDidLoad()

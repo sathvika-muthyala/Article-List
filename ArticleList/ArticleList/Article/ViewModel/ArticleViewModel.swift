@@ -8,7 +8,8 @@
 import UIKit
 
 protocol ArticleViewModelProtocol: AnyObject {
-    var articleList: [Article] { get }
+    var articleList: [Article] { get set}
+    var filteredList: [Article] { get }
     var errorMessage: String? { get }
     var heightOfRow: Int {get}
     func getDataFromServer<T: Decodable>(
@@ -29,13 +30,27 @@ class ArticleViewModel: ArticleViewModelProtocol {
   
     var errorState: NetworkState?
     var articleList: [Article] = []
-    var filteredList: [Article] = []
     var networkManager = NetworkManager.shared
     var heightOfRow: Int = Height.rowHeight.rawValue
+    private var filterQuery: String = ""
+    var filteredList: [Article] {
+            if filterQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return articleList
+            } else {
+                return articleList.filter {
+                    $0.title.localizedCaseInsensitiveContains(filterQuery) ||
+                    ($0.description?.localizedCaseInsensitiveContains(filterQuery) ?? false) ||
+                    ($0.author?.localizedCaseInsensitiveContains(filterQuery) ?? false)
+                }
+            }
+        }
+    
     
     init(networkManager: Network = NetworkManager.shared) {
         self.networkManager = networkManager as! NetworkManager
     }
+    
+   
     
     func getDataFromServer<T: Decodable>(
         type: T.Type,
@@ -52,20 +67,18 @@ class ArticleViewModel: ArticleViewModelProtocol {
                     // Caller decides what to do with result
                     if let articleList = (result as? ArticleList)?.articles {
                         self.articleList = articleList
-                        self.filteredList = articleList
                     }
-//                    if let countryList = (result as? CountryList)?.countries {
-//                        // example if you’re fetching countries
-//                        print("Fetched countries:", countryList)
-//                    }
                 }
             }
             
             DispatchQueue.main.async { closure(self.errorState) }
         }
     }
-
     
+    func filterArticles(query: String) {
+        filterQuery = query
+    }
+  
     func getCount() -> Int {
         return filteredList.count
     }
@@ -90,19 +103,6 @@ class ArticleViewModel: ArticleViewModelProtocol {
     func getFormattedDate(row: Int) -> String {
         return getArticle(row: row)?.dateOfPublicationOnly ?? ""
     }
-    
-    func filterArticles(query: String) {
-        if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            filteredList = articleList
-        } else {
-            filteredList = articleList.filter {
-                $0.title.localizedCaseInsensitiveContains(query) ||
-                ($0.description?.localizedCaseInsensitiveContains(query) ?? false) ||
-                ($0.author?.localizedCaseInsensitiveContains(query) ?? false)
-            }
-        }
-    }
-
 
     func getImage(row: Int, completion: @escaping (UIImage?) -> Void) {
         guard let urlString = getArticle(row: row)?.imageUrl, !urlString.isEmpty else {

@@ -7,11 +7,14 @@
 
 import UIKit
 
-protocol ArticleViewModelProtocol {
+protocol ArticleViewModelProtocol: AnyObject {
     var articleList: [Article] { get }
     var errorMessage: String? { get }
     var heightOfRow: Int {get}
-    func getDataFromServer(closure: @escaping (NetworkState?) -> Void)
+    func getDataFromServer<T: Decodable>(
+        type: T.Type,
+        closure: @escaping (NetworkState?) -> Void
+    )
     func getArticle(row: Int) -> Article?
     func getCount() -> Int
     func getTitle(row: Int) -> String
@@ -23,7 +26,7 @@ protocol ArticleViewModelProtocol {
 
 
 class ArticleViewModel: ArticleViewModelProtocol {
-    
+  
     var errorState: NetworkState?
     var articleList: [Article] = []
     var filteredList: [Article] = []
@@ -34,23 +37,34 @@ class ArticleViewModel: ArticleViewModelProtocol {
         self.networkManager = networkManager as! NetworkManager
     }
     
-    func getDataFromServer(closure: @escaping (NetworkState?) -> Void) {
+    func getDataFromServer<T: Decodable>(
+        type: T.Type,
+        closure: @escaping (NetworkState?) -> Void
+    ) {
         networkManager.getData(from: Server.articleApi.rawValue) { [weak self] fetchedState in
             guard let self = self else { return }
             
             switch fetchedState {
             case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
                 self.errorState = fetchedState
-                break
             case .success(let data):
-                self.articleList = self.networkManager.parse(data: data) ?? []
-                self.filteredList = self.articleList  // start with full list
-                break
+                if let result = self.networkManager.parse(data: data, type: type) {
+                    // Caller decides what to do with result
+                    if let articleList = (result as? ArticleList)?.articles {
+                        self.articleList = articleList
+                        self.filteredList = articleList
+                    }
+//                    if let countryList = (result as? CountryList)?.countries {
+//                        // example if you’re fetching countries
+//                        print("Fetched countries:", countryList)
+//                    }
+                }
             }
             
             DispatchQueue.main.async { closure(self.errorState) }
         }
     }
+
     
     func getCount() -> Int {
         return filteredList.count
@@ -115,21 +129,3 @@ class ArticleViewModel: ArticleViewModelProtocol {
 
 }
 
-extension ArticleViewModel {
-    var errorMessage: String? {
-        guard let errorState = errorState else { return ""}
-        switch errorState {
-        case .isLoading:
-            return "Data Loading"
-        case .invalidURL:
-            return "Invalid URL"
-        case .errorFetchingData:
-            return "Error fetching data"
-        case .noDataFromServer:
-            return "No data from server"
-        default:
-            return ""
-            
-        }
-    }
-}

@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class DetailsViewModel {
+final class DetailsViewModel: AnyObject {
     var article: Article
 
     init(article: Article) {

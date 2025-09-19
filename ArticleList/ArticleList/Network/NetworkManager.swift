@@ -1,22 +1,14 @@
-//
-//  Untitled.swift
-//  ArticleList
-//
-//  Created by sathvika muthyala on 9/8/25.
-//
-
 import Foundation
-
 protocol Network {
-    
     func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void)
-    func parse(data: Data?) -> [Article]?
-    
+    func parse<T: Decodable>(data: Data?, type: T.Type) -> T?
 }
 
 class NetworkManager: Network {
     
     static let shared = NetworkManager()
+    private init() {}
+    
     var state: NetworkState = .isLoading
     
     func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void) {
@@ -26,8 +18,10 @@ class NetworkManager: Network {
             return
         }
         
-        URLSession.shared.dataTask(with: serverURL) { [self] data, response, error in
-            if let _ = error {
+        URLSession.shared.dataTask(with: serverURL) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if error != nil {
                 self.state = .errorFetchingData
                 closure(self.state)
                 return
@@ -35,26 +29,27 @@ class NetworkManager: Network {
             
             guard let data = data else {
                 self.state = .noDataFromServer
-                closure(state)
+                closure(self.state)
                 return
             }
+            
             self.state = .success(data)
             closure(self.state)
         }.resume()
     }
     
-    func parse(data: Data?) -> [Article]? {
+    func parse<T: Decodable>(data: Data?, type: T.Type) -> T? {
         guard let data = data else {
             print("No data to parse")
-            return []
+            return nil
         }
         do {
             let decoder = JSONDecoder()
-            let fetchedResult = try decoder.decode(ArticleList.self, from: data)
-            return fetchedResult.articles
+            let fetchedResult = try decoder.decode(T.self, from: data)
+            return fetchedResult
         } catch {
-            print(error)
+            print("Decoding error:", error)
+            return nil
         }
-        return []
     }
 }

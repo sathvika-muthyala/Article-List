@@ -28,24 +28,25 @@ final class ArticleListViewController: UIViewController {
 
         let startTime = Date()
 
-        viewModel.getDataFromServer { [weak self] errorState in
+        viewModel.getDataFromServer(type: ArticleList.self) { [weak self] errorState in
             guard let self = self else { return }
 
-            DispatchQueue.main.async {
-                let elapsed = Date().timeIntervalSince(startTime)
-                let delay = max(0, 1.0 - elapsed)
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    self.activityIndicator.stopAnimating()
-                    self.tableView.isHidden = false
-                    if let _ = errorState {
-                        self.showAlert(title: "Article List",
-                                       message: self.viewModel.errorMessage ?? "")
-                    } else {
-                        self.tableView.reloadData()
-                    }
+            let elapsed = Date().timeIntervalSince(startTime)
+            let delay = max(0, 1.0 - elapsed)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                self.activityIndicator.stopAnimating()
+                self.tableView.isHidden = false
+
+                if let _ = errorState {
+                    self.showAlert(title: "Article List",
+                                   message: self.viewModel.errorMessage ?? "")
+                } else {
+                    self.tableView.reloadData()
                 }
             }
         }
+
     }
 
     
@@ -72,15 +73,17 @@ final class ArticleListViewController: UIViewController {
         }
         
     @objc private func refreshData() {
-        viewModel.getDataFromServer { [weak self] errorState in
+        viewModel.getDataFromServer(type: ArticleList.self) { [weak self] errorState in
             guard let self = self else { return }
             
             DispatchQueue.main.async {
                 self.refreshControlView.endRefreshing()
                 
                 if let _ = errorState {
-                    self.showAlert(title: "Article List",
-                                   message: self.viewModel.errorMessage ?? "Something went wrong")
+                    self.showAlert(
+                        title: "Article List",
+                        message: self.viewModel.errorMessage ?? "Something went wrong"
+                    )
                 } else {
                     self.tableView.reloadData()
                 }

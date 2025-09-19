@@ -14,3 +14,42 @@ extension UIViewController {
         self.present(alertController, animated: true)
     }
 }
+
+
+extension ArticleViewModel {
+    var errorMessage: String? {
+        guard let errorState = errorState else { return ""}
+        switch errorState {
+        case .isLoading:
+            return "Data Loading"
+        case .invalidURL:
+            return "Invalid URL"
+        case .errorFetchingData:
+            return "Error fetching data"
+        case .noDataFromServer:
+            return "No data from server"
+        default:
+            return ""
+            
+        }
+    }
+}
+
+extension CountryViewModel {
+    var errorMessage: String? {
+        guard let errorState = errorState else { return ""}
+        switch errorState {
+        case .isLoading:
+            return "Data Loading"
+        case .invalidURL:
+            return "Invalid URL"
+        case .errorFetchingData:
+            return "Error fetching data"
+        case .noDataFromServer:
+            return "No data from server"
+        default:
+            return ""
+            
+        }
+    }
+}

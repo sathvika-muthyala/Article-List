@@ -67,7 +67,12 @@ class ArticleViewModel: ArticleViewModelProtocol {
                     // Caller decides what to do with result
                     if let articleList = (result as? ArticleList)?.articles {
                         self.articleList = articleList
+                        self.filterArticles(query: self.filterQuery) // keep last query applied
                     }
+
+//                    if let articleList = (result as? ArticleList)?.articles {
+//                        self.articleList = articleList
+//                    }
                 }
             }
             

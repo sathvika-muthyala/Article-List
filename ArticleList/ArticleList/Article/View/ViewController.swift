@@ -9,6 +9,8 @@ final class ArticleListViewController: UIViewController {
     private var searchDebounceWorkItem: DispatchWorkItem?
     private let refreshControlView = UIRefreshControl()
     private let activityIndicator = UIActivityIndicatorView(style: .large)
+    private var lastQuery: String = ""
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -57,6 +59,8 @@ final class ArticleListViewController: UIViewController {
         searchController.hidesNavigationBarDuringPresentation = true
         searchController.searchBar.placeholder = "What's on your mind?"
         searchController.searchResultsUpdater = self
+        searchController.searchBar.setValue("Done", forKey: "cancelButtonText")
+        searchController.searchBar.delegate = self
         navigationItem.searchController = searchController
         definesPresentationContext = true
     }
@@ -73,6 +77,10 @@ final class ArticleListViewController: UIViewController {
         }
         
     @objc private func refreshData() {
+        // Reset query so next reload shows full list
+        lastQuery = ""
+        viewModel.filterArticles(query: "")
+
         viewModel.getDataFromServer(type: ArticleList.self) { [weak self] errorState in
             guard let self = self else { return }
             
@@ -91,6 +99,7 @@ final class ArticleListViewController: UIViewController {
         }
     }
 
+    
     private func setupLoader() {
         activityIndicator.color = .systemCyan
         activityIndicator.center = view.center
@@ -148,9 +157,12 @@ extension ArticleListViewController: UITableViewDelegate {
 extension ArticleListViewController: UISearchResultsUpdating {
     func updateSearchResults(for searchController: UISearchController) {
         let query = searchController.searchBar.text ?? ""
+        let effectiveQuery = query.isEmpty ? lastQuery : query
+        lastQuery = effectiveQuery
+        
         searchDebounceWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
-            self?.viewModel.filterArticles(query: query)
+            self?.viewModel.filterArticles(query: effectiveQuery)
             DispatchQueue.main.async {
                 self?.tableView.reloadData()
             }
@@ -158,4 +170,14 @@ extension ArticleListViewController: UISearchResultsUpdating {
         searchDebounceWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
     }
+
 }
+
+extension ArticleListViewController: UISearchBarDelegate {
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        viewModel.filterArticles(query: lastQuery)
+        tableView.reloadData()
+        searchController.searchBar.resignFirstResponder()
+    }
+}
+

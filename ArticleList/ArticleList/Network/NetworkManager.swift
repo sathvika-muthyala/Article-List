@@ -7,7 +7,6 @@ protocol Network {
 class NetworkManager: Network {
     
     static let shared = NetworkManager()
-    private init() {}
     
     var state: NetworkState = .isLoading
     

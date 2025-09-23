@@ -1,13 +1,15 @@
 import Foundation
 protocol Network {
     func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void)
-    func parse<T: Decodable>(data: Data?, type: T.Type) -> T?
+    func parse<T: Decodable>(data: Data?, type: T.Type) -> Result<T, NetworkState>
 }
 
 class NetworkManager: Network {
     
     static let shared = NetworkManager()
     
+    private init() {}
+
     var state: NetworkState = .isLoading
     
     func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void) {
@@ -37,18 +39,16 @@ class NetworkManager: Network {
         }.resume()
     }
     
-    func parse<T: Decodable>(data: Data?, type: T.Type) -> T? {
-        guard let data = data else {
-            print("No data to parse")
-            return nil
+    func parse<T: Decodable>(data: Data?, type: T.Type) -> Result<T, NetworkState> {
+            guard let data = data else {
+                return .failure(.noDataFromServer)
+            }
+            do {
+                let decoder = JSONDecoder()
+                let decoded = try decoder.decode(T.self, from: data)
+                return .success(decoded)
+            } catch {
+                return .failure(.decodingError(error))
+            }
         }
-        do {
-            let decoder = JSONDecoder()
-            let fetchedResult = try decoder.decode(T.self, from: data)
-            return fetchedResult
-        } catch {
-            print("Decoding error:", error)
-            return nil
-        }
-    }
 }

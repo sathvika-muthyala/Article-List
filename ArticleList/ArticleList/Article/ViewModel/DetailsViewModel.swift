@@ -38,7 +38,7 @@ final class DetailsViewModel: AnyObject {
                 DispatchQueue.main.async {
                     completion(image)
                 }
-            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
+            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer, .decodingError(_):
                 DispatchQueue.main.async {
                     completion(nil)
                 }

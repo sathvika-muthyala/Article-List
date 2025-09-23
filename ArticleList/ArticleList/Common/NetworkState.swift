@@ -7,11 +7,12 @@
 
 import Foundation
 
-enum NetworkState {
+enum NetworkState: Error {
     case isLoading
     case invalidURL
     case errorFetchingData
     case noDataFromServer
+    case decodingError(Error)
     case success(Data)
 }
 

@@ -18,7 +18,8 @@ extension UIViewController {
 
 extension ArticleViewModel {
     var errorMessage: String? {
-        guard let errorState = errorState else { return ""}
+        guard let errorState = errorState else { return nil }
+        
         switch errorState {
         case .isLoading:
             return "Data Loading"
@@ -28,16 +29,19 @@ extension ArticleViewModel {
             return "Error fetching data"
         case .noDataFromServer:
             return "No data from server"
-        default:
-            return ""
-            
+        case .decodingError(let error):
+            return "Decoding error: \(error.localizedDescription)"
+        case .success:
+            return nil   // success is not an error
         }
     }
 }
 
+
 extension CountryViewModel {
     var errorMessage: String? {
-        guard let errorState = errorState else { return ""}
+        guard let errorState = errorState else { return nil }
+        
         switch errorState {
         case .isLoading:
             return "Data Loading"
@@ -47,9 +51,10 @@ extension CountryViewModel {
             return "Error fetching data"
         case .noDataFromServer:
             return "No data from server"
-        default:
-            return ""
-            
+        case .decodingError(let error):
+            return "Decoding error: \(error.localizedDescription)"
+        case .success:
+            return nil   // success is not an error
         }
     }
 }

@@ -34,10 +34,11 @@ class CountryViewModel: CountryViewModelProtocol {
     }
     
     // MARK: - Networking
+    
     func getDataFromServer<T: Decodable>(
         type: T.Type,
         closure: @escaping (NetworkState?) -> Void
-    ){
+    ) {
         networkManager.getData(from: Server.countryApi.rawValue) { [weak self] fetchedState in
             guard let self = self else { return }
             
@@ -46,15 +47,30 @@ class CountryViewModel: CountryViewModelProtocol {
                 self.errorState = fetchedState
                 
             case .success(let data):
-                if let countries = self.networkManager.parse(data: data, type: [Country].self) {
-                    self.countryList = countries
-                    self.filteredList = countries
-                } else {
-                    self.errorState = .errorFetchingData
+                switch self.networkManager.parse(data: data, type: type) {
+                case .success(let result):
+                    if let countries = result as? [Country] {
+                        self.countryList = countries
+                        self.filteredList = countries
+                        self.errorState = nil   // ✅ only success when we actually decoded countries
+                    } else {
+                        self.errorState = .decodingError(NSError(
+                            domain: "Decoding",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "Unexpected type decoded"]
+                        ))
+                    }
+                case .failure(let parseError):
+                    self.errorState = parseError
                 }
+                
+            case .decodingError:
+                self.errorState = fetchedState
             }
             
-            DispatchQueue.main.async { closure(self.errorState) }
+            DispatchQueue.main.async {
+                closure(self.errorState)
+            }
         }
     }
 

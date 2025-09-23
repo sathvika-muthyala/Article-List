@@ -9,7 +9,6 @@ import UIKit
 
 class RecentsViewController: UIViewController {
     
-
     private let recentsTableView = UITableView()
     private var viewModel = CountryViewModel()
     private let searchController = UISearchController(searchResultsController: nil)
@@ -47,7 +46,7 @@ class RecentsViewController: UIViewController {
 
         let startTime = Date()
 
-        viewModel.getDataFromServer(type: Country.self) { [weak self] errorState in
+        viewModel.getDataFromServer(type: [Country].self) { [weak self] errorState in
             guard let self = self else { return }
 
             let elapsed = Date().timeIntervalSince(startTime)
@@ -85,7 +84,7 @@ class RecentsViewController: UIViewController {
         }
         
     @objc private func refreshData() {
-        viewModel.getDataFromServer(type: Country.self) { [weak self] errorState in
+        viewModel.getDataFromServer(type: [Country].self) { [weak self] errorState in
             guard let self = self else { return }
             
             DispatchQueue.main.async {

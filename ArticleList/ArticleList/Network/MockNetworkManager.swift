@@ -12,22 +12,40 @@ final class MockNetworkManager: Network {
     private init() {}
 
     var shouldFail: Bool = false
+    
+    // MARK: - Stub JSON
     var stubArticlesJSON: String = """
     {
         "articles": [
-            { "author": "Mock Author", "title": "Mock Title", "description": "Mock description", "url": "https://example.com", "urlToImage": null, "publishedAt": "2025-09-19T10:00:00Z", "content": "Mock content" }
+            {
+                "author": "Mock Author",
+                "title": "Mock Title",
+                "description": "Mock description",
+                "url": "https://example.com",
+                "urlToImage": null,
+                "publishedAt": "2025-09-19T10:00:00Z",
+                "content": "Mock content"
+            }
         ]
     }
     """
+    
     var stubCountriesJSON: String = """
     {
         "countries": [
-            { "countryName": "Mockland", "code": "ML", "region": "Mock Region", "capital": "Mock City" }
+            {
+                "countryName": "Mockland",
+                "code": "ML",
+                "region": "Mock Region",
+                "capital": "Mock City"
+            }
         ]
     }
     """
+    
     var mockImageData: Data?
 
+    // MARK: - Mock getData
     func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void) {
         if shouldFail {
             closure(.errorFetchingData)
@@ -35,23 +53,27 @@ final class MockNetworkManager: Network {
         }
 
         guard let urlString = serverUrl, !urlString.isEmpty else {
-            // Default stub is Article JSON
             closure(.success(stubArticlesJSON.data(using: .utf8)!))
             return
         }
 
+        // Decide if it's an image
         let isImage = urlString.lowercased().contains("image")
         if isImage {
             if let img = mockImageData {
                 closure(.success(img))
             } else {
-                let pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB..." // tiny placeholder PNG
-                closure(.success(Data(base64Encoded: pngBase64)!))
+                let pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB..." // placeholder PNG
+                if let data = Data(base64Encoded: pngBase64) {
+                    closure(.success(data))
+                } else {
+                    closure(.noDataFromServer)
+                }
             }
             return
         }
 
-        // Return Articles or Countries depending on URL
+        // Return stubbed JSON depending on URL
         if urlString.lowercased().contains("country") {
             closure(.success(stubCountriesJSON.data(using: .utf8)!))
         } else {
@@ -59,13 +81,17 @@ final class MockNetworkManager: Network {
         }
     }
 
-    func parse<T: Decodable>(data: Data?, type: T.Type) -> T? {
-        guard let data = data else { return nil }
+    // MARK: - Mock parse
+    func parse<T: Decodable>(data: Data?, type: T.Type) -> Result<T, NetworkState> {
+        guard let data = data else {
+            return .failure(.noDataFromServer)
+        }
         do {
-            return try JSONDecoder().decode(T.self, from: data)
+            let decoded = try JSONDecoder().decode(T.self, from: data)
+            return .success(decoded)
         } catch {
             print("Mock decoding error:", error)
-            return nil
+            return .failure(.decodingError(error))
         }
     }
 }

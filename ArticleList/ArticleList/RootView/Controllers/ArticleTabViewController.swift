@@ -20,7 +20,6 @@ class ArticleTabViewController: UIViewController {
         label.center = view.center
         view.addSubview(label)
 
-        // Do any additional setup after loading the view.
     }
     
 

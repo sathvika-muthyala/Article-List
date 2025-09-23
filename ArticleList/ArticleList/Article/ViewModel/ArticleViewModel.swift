@@ -53,28 +53,36 @@ class ArticleViewModel: ArticleViewModelProtocol {
    
     
     func getDataFromServer<T: Decodable>(
-        type: T.Type,
-        closure: @escaping (NetworkState?) -> Void
-    ) {
-        networkManager.getData(from: Server.articleApi.rawValue) { [weak self] fetchedState in
-            guard let self = self else { return }
-            
-            switch fetchedState {
-            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
-                self.errorState = fetchedState
-            case .success(let data):
-                if let result = self.networkManager.parse(data: data, type: type) {
-                    // Caller decides what to do with result
-                    if let articleList = (result as? ArticleList)?.articles {
-                        self.articleList = articleList
-                        self.filterArticles(query: self.filterQuery) // keep last query applied
+            type: T.Type,
+            closure: @escaping (NetworkState?) -> Void
+        ) {
+            networkManager.getData(from: Server.articleApi.rawValue) { [weak self] fetchedState in
+                guard let self = self else { return }
+                
+                switch fetchedState {
+                case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
+                    self.errorState = fetchedState
+                    
+                case .success(let data):
+                    switch self.networkManager.parse(data: data, type: type) {
+                    case .success(let result):
+                        if let articleList = (result as? ArticleList)?.articles {
+                            self.articleList = articleList
+                            self.filterArticles(query: self.filterQuery)
+                        }
+                        self.errorState = nil
+                    case .failure(let parseError):
+                        self.errorState = parseError
                     }
+                case .decodingError:
+                    self.errorState = fetchedState
+                }
+                
+                DispatchQueue.main.async {
+                    closure(self.errorState)
                 }
             }
-            
-            DispatchQueue.main.async { closure(self.errorState) }
         }
-    }
     
     func filterArticles(query: String) {
         filterQuery = query
@@ -104,9 +112,10 @@ class ArticleViewModel: ArticleViewModelProtocol {
     func getFormattedDate(row: Int) -> String {
         return getArticle(row: row)?.dateOfPublicationOnly ?? ""
     }
-
+    
     func getImage(row: Int, completion: @escaping (UIImage?) -> Void) {
-        guard let urlString = getArticle(row: row)?.imageUrl, !urlString.isEmpty else {
+        guard let urlString = getArticle(row: row)?.imageUrl,
+              !urlString.isEmpty else {
             DispatchQueue.main.async { completion(nil) }
             return
         }
@@ -119,7 +128,7 @@ class ArticleViewModel: ArticleViewModelProtocol {
                     completion(image)
                 }
 
-            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
+            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer, .decodingError:
                 DispatchQueue.main.async {
                     completion(nil)
                 }
@@ -128,5 +137,5 @@ class ArticleViewModel: ArticleViewModelProtocol {
     }
 
 
-}
 
+}

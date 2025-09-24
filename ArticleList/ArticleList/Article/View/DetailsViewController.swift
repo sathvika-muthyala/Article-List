@@ -1,5 +1,9 @@
 import UIKit
 
+protocol ArticleDetailsDelegate: AnyObject {
+    func didUpdateArticle(_ article: Article, at index: Int)
+}
+
 class DetailsViewController: UIViewController {
     @IBOutlet weak var updateText: UITextField!
     @IBOutlet weak var articleImg: UIImageView!
@@ -7,8 +11,10 @@ class DetailsViewController: UIViewController {
     @IBOutlet weak var body: UILabel!
 
     var viewModel: DetailsViewModel!
-    var closure: ((Article?) -> Void)?
-
+//    var closure: ((Article?) -> Void)?
+    var rowIndex: Int?
+    
+    weak var delegate: ArticleDetailsDelegate?
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -41,7 +47,9 @@ class DetailsViewController: UIViewController {
 
     @objc func backToPreviousScreen() {
         viewModel.setAuthor(updateText.text)
-        closure?(viewModel.article) 
+        if let row = rowIndex {
+            delegate?.didUpdateArticle(viewModel.article, at: row)  
+        }
         navigationController?.popViewController(animated: true)
     }
 }

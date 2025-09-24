@@ -136,6 +136,26 @@ class ArticleViewModel: ArticleViewModelProtocol {
         }
     }
 
-
-
 }
+
+extension ArticleViewModel {
+    var errorMessage: String? {
+        guard let errorState = errorState else { return nil }
+        
+        switch errorState {
+        case .isLoading:
+            return "Data Loading"
+        case .invalidURL:
+            return "Invalid URL"
+        case .errorFetchingData:
+            return "Error fetching data"
+        case .noDataFromServer:
+            return "No data from server"
+        case .decodingError(let error):
+            return "Decoding error: \(error.localizedDescription)"
+        case .success:
+            return nil
+        }
+    }
+}
+

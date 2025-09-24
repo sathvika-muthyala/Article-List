@@ -23,7 +23,6 @@ protocol CountryViewModelProtocol: AnyObject{
 
 class CountryViewModel: CountryViewModelProtocol {
     
-    // MARK: - Properties
     var errorState: NetworkState?  
     var countryList: [Country] = []
     private var filteredList: [Country] = []
@@ -32,8 +31,6 @@ class CountryViewModel: CountryViewModelProtocol {
     init(networkManager: Network = NetworkManager.shared) {
         self.networkManager = networkManager
     }
-    
-    // MARK: - Networking
     
     func getDataFromServer<T: Decodable>(
         type: T.Type,
@@ -74,11 +71,13 @@ class CountryViewModel: CountryViewModelProtocol {
         }
     }
 
-
-    
-    // MARK: - Helpers
     func getCount() -> Int {
         return filteredList.count
+    }
+    
+    func getCountry(row: Int) -> Country? {
+        guard row >= 0, row < filteredList.count else { return nil }
+        return filteredList[row]
     }
     
     func getCountryName(row: Int) -> String {
@@ -101,7 +100,11 @@ class CountryViewModel: CountryViewModelProtocol {
         return filteredList[row].capital ?? ""
     }
     
-    // MARK: - Filtering
+    func deleteCountry(at index: Int) {
+            guard index >= 0 && index < filteredList.count else { return }
+            filteredList.remove(at: index)
+        }
+    
     func filterCountries(query: String) {
         if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             filteredList = countryList
@@ -114,3 +117,25 @@ class CountryViewModel: CountryViewModelProtocol {
         }
     }
 }
+
+extension CountryViewModel {
+    var errorMessage: String? {
+        guard let errorState = errorState else { return nil }
+        
+        switch errorState {
+        case .isLoading:
+            return "Data Loading"
+        case .invalidURL:
+            return "Invalid URL"
+        case .errorFetchingData:
+            return "Error fetching data"
+        case .noDataFromServer:
+            return "No data from server"
+        case .decodingError(let error):
+            return "Decoding error: \(error.localizedDescription)"
+        case .success:
+            return nil
+        }
+    }
+}
+

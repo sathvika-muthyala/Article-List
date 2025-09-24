@@ -5,7 +5,7 @@ final class ArticleListViewController: UIViewController {
     @IBOutlet weak var tableView: UITableView!
     private let searchController = UISearchController(searchResultsController: nil)
     private var viewModel = ArticleViewModel()
-    var coordinatorFlowDelegate: ArticleListCoordinatorProtocol?
+    private var coordinatorFlowDelegate: ArticleListCoordinatorProtocol?
     private var searchDebounceWorkItem: DispatchWorkItem?
     private let refreshControlView = UIRefreshControl()
     private let activityIndicator = UIActivityIndicatorView(style: .large)
@@ -142,12 +142,14 @@ extension ArticleListViewController: UITableViewDelegate {
         let row = indexPath.row
         guard let article = viewModel.getArticle(row: row) else { return }
         detailsVC.viewModel = DetailsViewModel(article: article)
-        detailsVC.closure = { [weak self] updated in
-            guard let self = self, let updated = updated else { return }
-            guard row < self.viewModel.articleList.count else { return }
-            self.viewModel.articleList[row] = updated
-            self.tableView.reloadRows(at: [IndexPath(row: row, section: 0)], with: .automatic)
-        }
+        detailsVC.delegate = self 
+        detailsVC.rowIndex = row
+//        detailsVC.closure = { [weak self] updated in
+//            guard let self = self, let updated = updated else { return }
+//            guard row < self.viewModel.articleList.count else { return }
+//            self.viewModel.articleList[row] = updated
+//            self.tableView.reloadRows(at: [IndexPath(row: row, section: 0)], with: .automatic)
+//        }
         
         coordinatorFlowDelegate?.navigateToDetail(detailsVC)
 
@@ -178,6 +180,14 @@ extension ArticleListViewController: UISearchBarDelegate {
         viewModel.filterArticles(query: lastQuery)
         tableView.reloadData()
         searchController.searchBar.resignFirstResponder()
+    }
+}
+
+extension ArticleListViewController: ArticleDetailsDelegate {
+    func didUpdateArticle(_ article: Article, at index: Int) {
+        guard index < viewModel.articleList.count else { return }
+        viewModel.articleList[index] = article
+        tableView.reloadRows(at: [IndexPath(row: index, section: 0)], with: .automatic)
     }
 }
 

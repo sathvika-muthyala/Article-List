@@ -120,6 +120,7 @@ extension RecentsViewController: UITableViewDataSource {
             fatalError("Unable to dequeue CountryCell as CountryTableCell")
         }
         cell.configure(with: viewModel, at: indexPath, in: recentsTableView)
+        cell.delegate = self
         return cell
     }
    
@@ -138,4 +139,11 @@ extension RecentsViewController: UISearchResultsUpdating {
         searchDebounceWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
     }
+}
+
+extension RecentsViewController: CountryTableViewCellDelegate {
+    func didTapDeleteButton(forCountry country: Country, row indexPath: IndexPath) {
+            viewModel.deleteCountry(at: indexPath.row)
+            recentsTableView.deleteRows(at: [indexPath], with: .automatic)
+        }
 }

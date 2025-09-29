@@ -19,7 +19,7 @@ struct Article: Decodable {
     let imageUrl: String?
     let dateOfPublication: String?
     let content: String?
-    
+    //Used CodingKeys
     enum CodingKeys: String, CodingKey {
         case source
         case author

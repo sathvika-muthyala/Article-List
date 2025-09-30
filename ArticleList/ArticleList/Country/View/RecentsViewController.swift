@@ -15,15 +15,18 @@ class RecentsViewController: UIViewController {
     private var searchDebounceWorkItem: DispatchWorkItem?
     private let refreshControlView = UIRefreshControl()
     private let activityIndicator = UIActivityIndicatorView(style: .large)
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         self.recentsTableView.dataSource = self
         setUpTableView()
-        fetchCountries()
         setupNavBar()
         setupRefreshControl()
         setupLoader()
+        
+        Task { await fetchCountries() }
     }
+    
     private func setUpTableView() {
         recentsTableView.translatesAutoresizingMaskIntoConstraints = false
         recentsTableView.register(CountryTableViewCell.self, forCellReuseIdentifier: "CountryCell")
@@ -36,35 +39,33 @@ class RecentsViewController: UIViewController {
             recentsTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             recentsTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             recentsTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-            ])
+        ])
     }
     
-    private func fetchCountries() {
+    @MainActor
+    private func fetchCountries() async {
         activityIndicator.startAnimating()
         view.bringSubviewToFront(activityIndicator)
         recentsTableView.isHidden = true
 
         let startTime = Date()
+        
+        let errorState = await viewModel.getDataFromServer(type: [Country].self)
+        
+        let elapsed = Date().timeIntervalSince(startTime)
+        let delay = max(0, 1.0 - elapsed)
+        
+        try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) 
 
-        viewModel.getDataFromServer(type: [Country].self) { [weak self] errorState in
-            guard let self = self else { return }
+        activityIndicator.stopAnimating()
+        recentsTableView.isHidden = false
 
-            let elapsed = Date().timeIntervalSince(startTime)
-            let delay = max(0, 1.0 - elapsed)
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                self.activityIndicator.stopAnimating()
-                self.recentsTableView.isHidden = false
-
-                if let _ = errorState {
-                    self.showAlert(title: "Country List",
-                                   message: self.viewModel.errorMessage ?? "")
-                } else {
-                    self.recentsTableView.reloadData()
-                }
-            }
+        if let _ = errorState {
+            showAlert(title: "Country List",
+                      message: viewModel.errorMessage ?? "Something went wrong")
+        } else {
+            recentsTableView.reloadData()
         }
-
     }
     
     private func setupNavBar() {
@@ -79,25 +80,21 @@ class RecentsViewController: UIViewController {
     }
     
     private func setupRefreshControl() {
-            refreshControlView.addTarget(self, action: #selector(refreshData), for: .valueChanged)
-            recentsTableView.refreshControl = refreshControlView
-        }
-        
+        refreshControlView.addTarget(self, action: #selector(refreshData), for: .valueChanged)
+        recentsTableView.refreshControl = refreshControlView
+    }
+    
     @objc private func refreshData() {
-        viewModel.getDataFromServer(type: [Country].self) { [weak self] errorState in
-            guard let self = self else { return }
+        Task {
+            let errorState = await viewModel.getDataFromServer(type: [Country].self)
             
-            DispatchQueue.main.async {
-                self.refreshControlView.endRefreshing()
-                
-                if let _ = errorState {
-                    self.showAlert(
-                        title: "Country List",
-                        message: self.viewModel.errorMessage ?? "Something went wrong"
-                    )
-                } else {
-                    self.recentsTableView.reloadData()
-                }
+            refreshControlView.endRefreshing()
+            
+            if let _ = errorState {
+                showAlert(title: "Country List",
+                          message: viewModel.errorMessage ?? "Something went wrong")
+            } else {
+                recentsTableView.reloadData()
             }
         }
     }
@@ -109,6 +106,7 @@ class RecentsViewController: UIViewController {
         view.addSubview(activityIndicator)
     }
 }
+
 
 extension RecentsViewController: UITableViewDataSource {
     func tableView(_ recentsTableView: UITableView, numberOfRowsInSection section: Int) -> Int {

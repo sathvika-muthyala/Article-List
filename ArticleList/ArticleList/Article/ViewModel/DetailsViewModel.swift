@@ -25,25 +25,18 @@ final class DetailsViewModel: AnyObject {
         }
     }
 
-    func loadImage(_ completion: @escaping (UIImage?) -> Void) {
+    func loadImage() async -> UIImage? {
         guard let urlString = article.imageUrl, !urlString.isEmpty else {
-            DispatchQueue.main.async { completion(nil) }
-            return
+            return nil
         }
 
-        networkManager.getData(from: urlString) { state in
-            switch state {
-            case .success(let data):
-                let image = UIImage(data: data)
-                DispatchQueue.main.async {
-                    completion(image)
-                }
-            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer, .decodingError(_):
-                DispatchQueue.main.async {
-                    completion(nil)
-                }
-            }
+        do {
+            let data = try await networkManager.getData(from: urlString)
+            return UIImage(data: data)
+        } catch {
+            return nil
         }
     }
+
 
 }

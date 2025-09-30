@@ -1,54 +1,65 @@
 import Foundation
+
+// MARK: - Protocol Definition
 protocol Network {
-    func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void)
-    func parse<T: Decodable>(data: Data?, type: T.Type) -> Result<T, NetworkState>
+    func getData(from serverUrl: String?) async throws -> Data
+    func parse<T: Decodable>(data: Data?, type: T.Type) throws -> T
 }
 
-class NetworkManager: Network {
+// MARK: - Protocol Definition
+final class NetworkManager: Network {
     
+    //  Singleton
     static let shared = NetworkManager()
-    
     private init() {}
-
-    var state: NetworkState = .isLoading
     
-    func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void) {
+    private(set) var state: NetworkState = .isLoading
+    
+    // MARK: - Networking
+    func getData(from serverUrl: String?) async throws -> Data {
+        state = .isLoading
+        // Validate the URL
         guard let apiUrl = serverUrl, let serverURL = URL(string: apiUrl) else {
             state = .invalidURL
-            closure(state)
-            return
+            throw state
         }
         
-        URLSession.shared.dataTask(with: serverURL) { [weak self] data, response, error in
-            guard let self = self else { return }
-            
-            if error != nil {
-                self.state = .errorFetchingData
-                closure(self.state)
-                return
+        do {
+            let (data, response) = try await URLSession.shared.data(from: serverURL)
+            // Ensure we have a valid HTTP status
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                state = .errorFetchingData
+                throw state
+            }
+            // Ensure we received some data
+            guard !data.isEmpty else {
+                state = .noDataFromServer
+                throw state
             }
             
-            guard let data = data else {
-                self.state = .noDataFromServer
-                closure(self.state)
-                return
-            }
-            
-            self.state = .success(data)
-            closure(self.state)
-        }.resume()
+            state = .success(data)
+            return data
+        } catch {
+            state = .errorFetchingData
+            throw state
+        }
     }
     
-    func parse<T: Decodable>(data: Data?, type: T.Type) -> Result<T, NetworkState> {
-            guard let data = data else {
-                return .failure(.noDataFromServer)
-            }
-            do {
-                let decoder = JSONDecoder()
-                let results = try decoder.decode(T.self, from: data)
-                return .success(results)
-            } catch {
-                return .failure(.decodingError(error))
-            }
+    // MARK: - Parsing
+    func parse<T: Decodable>(data: Data?, type: T.Type) throws -> T {
+        guard let data = data else {
+            state = .noDataFromServer
+            throw state
         }
+        do {
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(T.self, from: data)
+            state = .success(data)
+            return decoded
+        } catch {
+            state = .decodingError(error)
+            throw state
+        }
+    }
 }

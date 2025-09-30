@@ -30,15 +30,13 @@ class ArticleTableViewCell: UITableViewCell {
         
         currentIndexPath = indexPath
         
-        viewModel.getImage(row: indexPath.row) { [weak self, weak tableView] image in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                if let visibleCell = tableView?.cellForRow(at: indexPath) as? ArticleTableViewCell,
-                   visibleCell == self {
-                    self.postImage.image = image
-                }
+        Task { [weak tableView] in
+            if let image = await viewModel.getImage(row: indexPath.row),
+               let visibleCell = tableView?.cellForRow(at: indexPath) as? ArticleTableViewCell {
+                visibleCell.postImage.image = image
             }
         }
+
     }
 
 }

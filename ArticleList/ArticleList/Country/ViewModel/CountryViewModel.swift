@@ -11,9 +11,8 @@ protocol CountryViewModelProtocol: AnyObject{
     var countryList: [Country] { get }
     var errorMessage: String? { get }
     func getDataFromServer<T: Decodable>(
-        type: T.Type,
-        closure: @escaping (NetworkState?) -> Void
-    )
+        type: T.Type
+    ) async -> NetworkState?
     func getCountryName(row: Int) -> String
     func getCount() -> Int
     func getCode(row: Int) -> String
@@ -33,43 +32,40 @@ class CountryViewModel: CountryViewModelProtocol {
     }
     
     func getDataFromServer<T: Decodable>(
-        type: T.Type,
-        closure: @escaping (NetworkState?) -> Void
-    ) {
-        networkManager.getData(from: Server.countryApi.rawValue) { [weak self] fetchedState in
-            guard let self = self else { return }
-            
-            switch fetchedState {
-            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
-                self.errorState = fetchedState
-                
-            case .success(let data):
-                switch self.networkManager.parse(data: data, type: type) {
-                case .success(let result):
-                    if let countries = result as? [Country] {
-                        self.countryList = countries
-                        self.filteredList = countries
-                        self.errorState = nil   // ✅ only success when we actually decoded countries
-                    } else {
-                        self.errorState = .decodingError(NSError(
-                            domain: "Decoding",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: "Unexpected type decoded"]
-                        ))
-                    }
-                case .failure(let parseError):
-                    self.errorState = parseError
+        type: T.Type
+    ) async -> NetworkState? {
+        do {
+            // 1. Fetch raw data
+            let data = try await networkManager.getData(from: Server.countryApi.rawValue)
+            do {
+                let decoded = try networkManager.parse(data: data, type: type)
+
+                if let countries = decoded as? [Country] {
+                    self.countryList = countries
+                    self.filteredList = countries
+                    self.errorState = nil  
+                } else {
+                    self.errorState = .decodingError(NSError(
+                        domain: "Decoding",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Unexpected type decoded"]
+                    ))
                 }
-                
-            case .decodingError:
-                self.errorState = fetchedState
+            } catch let parseError as NetworkState {
+                self.errorState = parseError
+            } catch {
+                self.errorState = .decodingError(error)
             }
-            
-            DispatchQueue.main.async {
-                closure(self.errorState)
-            }
+
+        } catch let networkError as NetworkState {
+            self.errorState = networkError
+        } catch {
+            self.errorState = .errorFetchingData
         }
+
+        return errorState
     }
+
 
     func getCount() -> Int {
         return filteredList.count

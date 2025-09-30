@@ -13,16 +13,15 @@ protocol ArticleViewModelProtocol: AnyObject {
     var errorMessage: String? { get }
     var heightOfRow: Int {get}
     func getDataFromServer<T: Decodable>(
-        type: T.Type,
-        closure: @escaping (NetworkState?) -> Void
-    )
+        type: T.Type
+    ) async -> NetworkState?
     func getArticle(row: Int) -> Article?
     func getCount() -> Int
     func getTitle(row: Int) -> String
     func getAuthor(row: Int) -> String
     func getDescription(row: Int) -> String
     func getFormattedDate(row: Int) -> String
-    func getImage(row: Int, completion: @escaping (UIImage?) -> Void)
+    func getImage(row: Int) async -> UIImage? 
 }
 
 
@@ -53,36 +52,26 @@ class ArticleViewModel: ArticleViewModelProtocol {
    
     
     func getDataFromServer<T: Decodable>(
-            type: T.Type,
-            closure: @escaping (NetworkState?) -> Void
-        ) {
-            networkManager.getData(from: Server.articleApi.rawValue) { [weak self] fetchedState in
-                guard let self = self else { return }
-                
-                switch fetchedState {
-                case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer:
-                    self.errorState = fetchedState
-                    
-                case .success(let data):
-                    switch self.networkManager.parse(data: data, type: type) {
-                    case .success(let result):
-                        if let articleList = (result as? ArticleList)?.articles {
-                            self.articleList = articleList
-                            self.filterArticles(query: self.filterQuery)
-                        }
-                        self.errorState = nil
-                    case .failure(let parseError):
-                        self.errorState = parseError
-                    }
-                case .decodingError:
-                    self.errorState = fetchedState
-                }
-                
-                DispatchQueue.main.async {
-                    closure(self.errorState)
-                }
+        type: T.Type
+    ) async -> NetworkState? {
+        do {
+            let data = try await networkManager.getData(from: Server.articleApi.rawValue)
+            let result = try networkManager.parse(data: data, type: type)
+            if let articleList = (result as? ArticleList)?.articles {
+                self.articleList = articleList
+                self.filterArticles(query: self.filterQuery)
             }
+            
+            self.errorState = nil
+            return nil 
+        } catch let error as NetworkState {
+            self.errorState = error
+            return error
+        } catch {
+            self.errorState = .errorFetchingData
+            return self.errorState
         }
+    }
     
     func filterArticles(query: String) {
         filterQuery = query
@@ -113,28 +102,19 @@ class ArticleViewModel: ArticleViewModelProtocol {
         return getArticle(row: row)?.dateOfPublicationOnly ?? ""
     }
     
-    func getImage(row: Int, completion: @escaping (UIImage?) -> Void) {
+    func getImage(row: Int) async -> UIImage? {
         guard let urlString = getArticle(row: row)?.imageUrl,
               !urlString.isEmpty else {
-            DispatchQueue.main.async { completion(nil) }
-            return
+            return nil
         }
-
-        networkManager.getData(from: urlString) { state in
-            switch state {
-            case .success(let data):
-                let image = UIImage(data: data)
-                DispatchQueue.main.async {
-                    completion(image)
-                }
-
-            case .isLoading, .invalidURL, .errorFetchingData, .noDataFromServer, .decodingError:
-                DispatchQueue.main.async {
-                    completion(nil)
-                }
-            }
+        do {
+            let data = try await networkManager.getData(from: urlString)
+            return UIImage(data: data)
+        } catch {
+            return nil
         }
     }
+
 
 }
 

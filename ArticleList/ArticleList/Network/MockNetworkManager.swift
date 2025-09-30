@@ -13,7 +13,6 @@ final class MockNetworkManager: Network {
 
     var shouldFail: Bool = false
     
-    // MARK: - Stub JSON
     var stubArticlesJSON: String = """
     {
         "articles": [
@@ -45,53 +44,44 @@ final class MockNetworkManager: Network {
     
     var mockImageData: Data?
 
-    // MARK: - Mock getData
-    func getData(from serverUrl: String?, closure: @escaping (NetworkState) -> Void) {
+    // MARK: - Mock getData (async/await)
+    func getData(from serverUrl: String?) async throws -> Data {
         if shouldFail {
-            closure(.errorFetchingData)
-            return
+            throw NetworkState.errorFetchingData
         }
 
         guard let urlString = serverUrl, !urlString.isEmpty else {
-            closure(.success(stubArticlesJSON.data(using: .utf8)!))
-            return
+            return Data(stubArticlesJSON.utf8)
         }
 
-        // Decide if it's an image
-        let isImage = urlString.lowercased().contains("image")
-        if isImage {
+        if urlString.lowercased().contains("image") {
             if let img = mockImageData {
-                closure(.success(img))
+                return img
             } else {
-                let pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB..." // placeholder PNG
+                let pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB..."
                 if let data = Data(base64Encoded: pngBase64) {
-                    closure(.success(data))
+                    return data
                 } else {
-                    closure(.noDataFromServer)
+                    throw NetworkState.noDataFromServer
                 }
             }
-            return
         }
 
-        // Return stubbed JSON depending on URL
         if urlString.lowercased().contains("country") {
-            closure(.success(stubCountriesJSON.data(using: .utf8)!))
+            return Data(stubCountriesJSON.utf8)
         } else {
-            closure(.success(stubArticlesJSON.data(using: .utf8)!))
+            return Data(stubArticlesJSON.utf8)
         }
     }
 
-    // MARK: - Mock parse
-    func parse<T: Decodable>(data: Data?, type: T.Type) -> Result<T, NetworkState> {
+    func parse<T: Decodable>(data: Data?, type: T.Type) throws -> T {
         guard let data = data else {
-            return .failure(.noDataFromServer)
+            throw NetworkState.noDataFromServer
         }
         do {
-            let decoded = try JSONDecoder().decode(T.self, from: data)
-            return .success(decoded)
+            return try JSONDecoder().decode(T.self, from: data)
         } catch {
-            print("Mock decoding error:", error)
-            return .failure(.decodingError(error))
+            throw NetworkState.decodingError(error)
         }
     }
 }

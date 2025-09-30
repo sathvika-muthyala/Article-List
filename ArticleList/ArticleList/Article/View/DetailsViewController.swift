@@ -34,11 +34,12 @@ class DetailsViewController: UIViewController {
             action: #selector(backToPreviousScreen)
         )
         
-        viewModel.loadImage { [weak self] image in
-            DispatchQueue.main.async {
-                self?.articleImg.image = image ?? UIImage(systemName: "photo")
-            }
+        Task { [weak self] in
+            guard let self = self else { return }
+            let image = await viewModel.loadImage()
+            self.articleImg.image = image ?? UIImage(systemName: "photo")
         }
+
     }
     
     @objc func cancelTapped() {

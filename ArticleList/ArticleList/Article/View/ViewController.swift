@@ -11,47 +11,42 @@ final class ArticleListViewController: UIViewController {
     private let activityIndicator = UIActivityIndicatorView(style: .large)
     private var lastQuery: String = ""
 
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.dataSource = self
         tableView.delegate = self
         setupNavBar()
         setupLoader()
-        fetchArticles()
         initializeCoordinator()
         setupRefreshControl()
+        
+        Task { await fetchArticles() }
     }
     
-    private func fetchArticles() {
+    @MainActor
+    private func fetchArticles() async {
         activityIndicator.startAnimating()
         view.bringSubviewToFront(activityIndicator)
         tableView.isHidden = true
 
         let startTime = Date()
+        
+        let errorState = await viewModel.getDataFromServer(type: ArticleList.self)
+        
+        let elapsed = Date().timeIntervalSince(startTime)
+        let delay = max(0, 1.0 - elapsed)
+        try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+        activityIndicator.stopAnimating()
+        tableView.isHidden = false
 
-        viewModel.getDataFromServer(type: ArticleList.self) { [weak self] errorState in
-            guard let self = self else { return }
-
-            let elapsed = Date().timeIntervalSince(startTime)
-            let delay = max(0, 1.0 - elapsed)
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                self.activityIndicator.stopAnimating()
-                self.tableView.isHidden = false
-
-                if let _ = errorState {
-                    self.showAlert(title: "Article List",
-                                   message: self.viewModel.errorMessage ?? "")
-                } else {
-                    self.tableView.reloadData()
-                }
-            }
+        if let _ = errorState {
+            showAlert(title: "Article List",
+                      message: viewModel.errorMessage ?? "Something went wrong")
+        } else {
+            tableView.reloadData()
         }
-
     }
-
-    
+    // MARK: - Navbar SetUp
     private func setupNavBar() {
         title = "Articles"
         navigationController?.navigationBar.prefersLargeTitles = false
@@ -64,42 +59,42 @@ final class ArticleListViewController: UIViewController {
         navigationItem.searchController = searchController
         definesPresentationContext = true
     }
-    
+ 
+    // MARK: - Coordinator Initializer
     private func initializeCoordinator() {
         if coordinatorFlowDelegate == nil {
-                coordinatorFlowDelegate = ArticleListCoordinator(navigationController: navigationController)
-            }
+            coordinatorFlowDelegate = ArticleListCoordinator(navigationController: navigationController)
+        }
     }
     
+    // MARK: - Refresh Controller SetUp
     private func setupRefreshControl() {
-            refreshControlView.addTarget(self, action: #selector(refreshData), for: .valueChanged)
-            tableView.refreshControl = refreshControlView
-        }
-        
+        refreshControlView.addTarget(self, action: #selector(refreshData), for: .valueChanged)
+        tableView.refreshControl = refreshControlView
+    }
+    
+    // MARK: - Refreshing Data
     @objc private func refreshData() {
-        // Reset query so next reload shows full list
         lastQuery = ""
         viewModel.filterArticles(query: "")
-
-        viewModel.getDataFromServer(type: ArticleList.self) { [weak self] errorState in
-            guard let self = self else { return }
+        
+        Task {
+            let errorState = await viewModel.getDataFromServer(type: ArticleList.self)
             
-            DispatchQueue.main.async {
-                self.refreshControlView.endRefreshing()
-                
-                if let _ = errorState {
-                    self.showAlert(
-                        title: "Article List",
-                        message: self.viewModel.errorMessage ?? "Something went wrong"
-                    )
-                } else {
-                    self.tableView.reloadData()
-                }
+            refreshControlView.endRefreshing()
+            
+            if let _ = errorState {
+                showAlert(
+                    title: "Article List",
+                    message: viewModel.errorMessage ?? "Something went wrong"
+                )
+            } else {
+                tableView.reloadData()
             }
         }
     }
-
     
+    // MARK: - Loader
     private func setupLoader() {
         activityIndicator.color = .systemCyan
         activityIndicator.center = view.center
@@ -108,7 +103,7 @@ final class ArticleListViewController: UIViewController {
     }
 }
 
-
+// MARK: - Table View Datasource
 extension ArticleListViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -130,6 +125,7 @@ extension ArticleListViewController: UITableViewDataSource {
 
 }
 
+// MARK: - Table View Delegate
 extension ArticleListViewController: UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -156,6 +152,7 @@ extension ArticleListViewController: UITableViewDelegate {
     }
 }
 
+// MARK: - Search Result
 extension ArticleListViewController: UISearchResultsUpdating {
     func updateSearchResults(for searchController: UISearchController) {
         let query = searchController.searchBar.text ?? ""
